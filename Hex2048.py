@@ -3,16 +3,13 @@
 ################################################################################
 ## Form generated from reading UI file 'Hex2048.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.14.2
+## Created by: Qt User Interface Compiler version 5.15.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
-    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
-from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
-    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
-    QPixmap, QRadialGradient)
+from PySide2.QtCore import *
+from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 
@@ -20,7 +17,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(741, 799)
+        MainWindow.resize(751, 815)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.QuitButton = QPushButton(self.centralwidget)
@@ -65,40 +62,16 @@ class Ui_MainWindow(object):
         self.graphicsView.setGeometry(QRect(110, 50, 521, 461))
         self.Label_player = QLabel(self.centralwidget)
         self.Label_player.setObjectName(u"Label_player")
-        self.Label_player.setGeometry(QRect(610, 10, 31, 31))
+        self.Label_player.setGeometry(QRect(640, 10, 51, 31))
         font1 = QFont()
         font1.setFamily(u"Arial")
         font1.setPointSize(12)
         self.Label_player.setFont(font1)
         self.Label_Text_Player = QLabel(self.centralwidget)
         self.Label_Text_Player.setObjectName(u"Label_Text_Player")
-        self.Label_Text_Player.setGeometry(QRect(490, 10, 121, 31))
+        self.Label_Text_Player.setGeometry(QRect(580, 10, 61, 31))
         self.Label_Text_Player.setFont(font)
         self.Label_Text_Player.setAlignment(Qt.AlignCenter)
-        self.MultiButton = QPushButton(self.centralwidget)
-        self.MultiButton.setObjectName(u"MultiButton")
-        self.MultiButton.setGeometry(QRect(10, 660, 93, 28))
-        self.TurnButton = QPushButton(self.centralwidget)
-        self.TurnButton.setObjectName(u"TurnButton")
-        self.TurnButton.setGeometry(QRect(580, 620, 101, 51))
-        self.AddressText = QTextEdit(self.centralwidget)
-        self.AddressText.setObjectName(u"AddressText")
-        self.AddressText.setGeometry(QRect(80, 565, 121, 31))
-        self.PortText = QTextEdit(self.centralwidget)
-        self.PortText.setObjectName(u"PortText")
-        self.PortText.setGeometry(QRect(80, 615, 121, 31))
-        self.AddressLabel = QLabel(self.centralwidget)
-        self.AddressLabel.setObjectName(u"AddressLabel")
-        self.AddressLabel.setGeometry(QRect(20, 570, 55, 16))
-        self.AddressLabel.setAlignment(Qt.AlignCenter)
-        self.PortLabel = QLabel(self.centralwidget)
-        self.PortLabel.setObjectName(u"PortLabel")
-        self.PortLabel.setGeometry(QRect(20, 620, 55, 16))
-        self.PortLabel.setAlignment(Qt.AlignCenter)
-        self.PortLabel.setWordWrap(False)
-        self.SaveButton = QPushButton(self.centralwidget)
-        self.SaveButton.setObjectName(u"SaveButton")
-        self.SaveButton.setGeometry(QRect(110, 660, 93, 28))
         self.SaveGameButton = QPushButton(self.centralwidget)
         self.SaveGameButton.setObjectName(u"SaveGameButton")
         self.SaveGameButton.setGeometry(QRect(115, 10, 101, 31))
@@ -115,19 +88,12 @@ class Ui_MainWindow(object):
         self.ControlButtons.raise_()
         self.Label_player.raise_()
         self.Label_Text_Player.raise_()
-        self.MultiButton.raise_()
-        self.TurnButton.raise_()
-        self.AddressText.raise_()
-        self.PortText.raise_()
-        self.AddressLabel.raise_()
-        self.PortLabel.raise_()
-        self.SaveButton.raise_()
         self.SaveGameButton.raise_()
         self.LoadButton.raise_()
         self.AIButton.raise_()
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 741, 26))
+        self.menubar.setGeometry(QRect(0, 0, 751, 21))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -152,11 +118,6 @@ class Ui_MainWindow(object):
         self.Label_Text.setText(QCoreApplication.translate("MainWindow", u"Controls", None))
         self.Label_player.setText("")
         self.Label_Text_Player.setText(QCoreApplication.translate("MainWindow", u"Player :", None))
-        self.MultiButton.setText(QCoreApplication.translate("MainWindow", u"Multiplayer ", None))
-        self.TurnButton.setText(QCoreApplication.translate("MainWindow", u"Wait for turn", None))
-        self.AddressLabel.setText(QCoreApplication.translate("MainWindow", u"Address", None))
-        self.PortLabel.setText(QCoreApplication.translate("MainWindow", u"Port", None))
-        self.SaveButton.setText(QCoreApplication.translate("MainWindow", u"Save Config", None))
         self.SaveGameButton.setText(QCoreApplication.translate("MainWindow", u"Save Game", None))
         self.LoadButton.setText(QCoreApplication.translate("MainWindow", u"Load Game", None))
         self.AIButton.setText(QCoreApplication.translate("MainWindow", u"Play with AI", None))
