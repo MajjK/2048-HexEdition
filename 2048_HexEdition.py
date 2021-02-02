@@ -1,5 +1,6 @@
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as et
 from Hex2048 import Ui_MainWindow
+from Hex2048_Menu import Ui_StartWindow
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
@@ -11,32 +12,29 @@ import random
 import time
 import sys
 # pyside2-uic Hex2048.ui > Hex2048.py
-AI_DEPTH_SEARCH = 3
-# Zwycięzca gry - przerwanie
-# Poczatek gry - okno
-# Przerwa pomiedzy ruchem a wygenerowaniem nowego agenta
-# Zmiana Nazw
-# Zmiana Grafiki
+# Sterowanie przyciskami
+# Tworzenie tablicy wyników
 # Rozbić na pliki klas
-# Dodać Multi
+
+# Przerwa pomiedzy ruchem a wygenerowaniem nowego agenta
+# Dodać Multi - Nowe Okno do wczytania/wpisania danych i wystartowania połączenia
 # Dodać Animacje Ruchu
 
 
-class ThreadSignals(QObject):
+class threadSignals(QObject):
     finished = Signal()
     error = Signal(tuple)
     result = Signal(object)
     game = Signal(object)
 
 
-class Thread(QRunnable):
-    # Class needed to implement multi-threading
+class thread(QRunnable):
     def __init__(self, fn, *args, **kwargs):
-        super(Thread, self).__init__()
+        super(thread, self).__init__()
         self.fn = fn
         self.args = args
         self.kwargs = kwargs
-        self.signals = ThreadSignals()
+        self.signals = threadSignals()
         self.kwargs['game_callback'] = self.signals.game
 
     @Slot()
@@ -53,9 +51,9 @@ class Thread(QRunnable):
             self.signals.finished.emit()
 
 
-class Map:
+class map:
     def __init__(self):
-        self.map = []
+        self.map_area = []
         for i in range(9):
             line = []
             if i < 5:
@@ -64,57 +62,58 @@ class Map:
             else:
                 for j in range(5 + 8 - i):
                     line.append(field())
-            self.map.append(line)
+            self.map_area.append(line)
 
     def update_map(self, agents):
         # Main function to clear and re-update agents positions and values on the map
         # It also checks if any agent has 2048 value, if so, game is finished
-        max = 0
+        max_value = 0
         finished = False
 
-        for lines in self.map:
+        for lines in self.map_area:
             for element in lines:
                 element.color = ""
                 element.value = ""
-        for agent in agents:
-            self.map[agent.pos_y][agent.pos_x].update_field(agent)
-            if agent.value > max:
-                max = agent.value
-        if max >= 32:
+        for elem in agents:
+            self.map_area[elem.pos_y][elem.pos_x].update_field(elem)
+            if elem.value > max_value:
+                max_value = elem.value
+        if max_value >= 1024:
             finished = True
         return finished
 
 
-class Game:
+class game:
     # Main Class connected with current game instance
-    def __init__(self, Connection, AI):
+    def __init__(self, ai, player):
         self.agents = []
-        self.map = Map()
+        self.map = map()
         self.finished = False
         self.turn = 0
-        self.GameHistory = ET.Element('Game')
-        self.GameHistory.set('AI', str(AI))
+        self.curr_turn = 0
+        self.game_history = et.Element('Game')
+        self.game_history.set('AI', str(ai))
+        self.game_history.set('Nickname', str(player))
 
-        new_agent1 = agent()
-        new_agent1.create_agent(0, self.map.map)
-        self.agents.append(new_agent1)
+        new_agent_1 = agent()
+        new_agent_1.create_agent(0, self.map.map_area)
+        self.agents.append(new_agent_1)
         self.finished = self.map.update_map(self.agents)
 
-        new_agent2 = agent()
-        new_agent2.create_agent(1, self.map.map)
-        self.agents.append(new_agent2)
-
+        new_agent_2 = agent()
+        new_agent_2.create_agent(1, self.map.map_area)
+        self.agents.append(new_agent_2)
         self.update_turn()
 
     def update_history(self):
-        turn = ET.SubElement(self.GameHistory, 'Turn')
-        turn.set('number', str(self.turn))
-        for agent in self.agents:
-            NewAgent = ET.SubElement(turn, 'Agent')
-            NewAgent.set('player', str(agent.player))
-            NewAgent.set('X', str(agent.pos_x))
-            NewAgent.set('Y', str(agent.pos_y))
-            NewAgent.text = str(agent.value)
+        turn = et.SubElement(self.game_history, 'Turn')
+        turn.set('Number', str(self.turn))
+        for elem in self.agents:
+            NewAgent = et.SubElement(turn, 'Agent')
+            NewAgent.set('Player', str(elem.player))
+            NewAgent.set('X', str(elem.pos_x))
+            NewAgent.set('Y', str(elem.pos_y))
+            NewAgent.text = str(elem.value)
 
     def sort_agents(self, move):
         if move == 1:
@@ -130,20 +129,20 @@ class Game:
         elif move == 6:
             self.agents.sort(key=lambda x: x.pos_y)
 
-    def play_turn(self, move, createAgent=True):
+    def play_turn(self, move, create_agent=True):
         self.sort_agents(move)
         for current_agent in self.agents:
             if current_agent.player == self.curr_turn:
-                current_agent.move_agent(self.map.map, move, self.agents)
+                current_agent.move_agent(self.map.map_area, move, self.agents)
         for current_agent in self.agents:
             if current_agent.player == self.curr_turn:
-                current_agent.move_agent(self.map.map, move, self.agents)
+                current_agent.move_agent(self.map.map_area, move, self.agents)
 
         self.finished = self.map.update_map(self.agents)
         self.turn += 1
-        if createAgent:
+        if create_agent:
             new_agent = agent()
-            new_agent.create_agent(self.turn % 2, self.map.map)
+            new_agent.create_agent(self.turn % 2, self.map.map_area)
             self.agents.append(new_agent)
         self.update_turn()
 
@@ -157,20 +156,6 @@ class field:
     def __init__(self):
         self.color = ""
         self.value = ""
-
-    def return_value(self):
-        str_val = str(self.value)
-        for i in range(4 - len(str_val)):
-            if i < 2:
-                str_val = " " + str_val
-            else:
-                str_val = str_val + " "
-
-        if self.color == '0':
-            str_val = '\x1b[0;30;41m' + str_val + '\x1b[0m'
-        elif self.color == '1':
-            str_val = '\x1b[0;30;44m' + str_val + '\x1b[0m'
-        return str_val
 
     def update_field(self, agent):
         self.color = str(agent.player)
@@ -202,8 +187,8 @@ class agent:
                 x = random.randrange(9)
             if map[y][x].value == "":
                 clear_field = True
-        self.pos_y = y
-        self.pos_x = x
+                self.pos_y = y
+                self.pos_x = x
 
     def move_agent(self, map, direction, agents):
         while True:
@@ -216,7 +201,6 @@ class agent:
                             break
                     else:
                         break
-
                 elif 4 < self.pos_y < 9:
                     if not self.look_for_collision(self.pos_y - 1, self.pos_x + 1, agents):
                         self.pos_y -= 1
@@ -290,7 +274,6 @@ class agent:
                             break
                     else:
                         break
-
                 elif 4 < self.pos_y < 9:
                     if not self.look_for_collision(self.pos_y - 1, self.pos_x, agents):
                         self.pos_y -= 1
@@ -300,56 +283,56 @@ class agent:
                     break
 
     def look_for_collision(self, pos_y, pos_x, agents):
-        for agent in agents:
-            if agent.pos_y == pos_y and agent.pos_x == pos_x:
-                if agent.player == self.player and agent.value == self.value:
-                    agent.value += self.value
+        for elem in agents:
+            if elem.pos_y == pos_y and elem.pos_x == pos_x:
+                if elem.player == self.player and elem.value == self.value:
+                    elem.value += self.value
                     agents.pop(agents.index(self))
                 return True
         return False
 
 
-class GameNode:
+class gameNode:
     # Class connected with AI game mode
     def __init__(self, game, level):
         self.game = game
         self.level = level
         self.children = []
 
-    def generateNextLevel(self):
+    def generate_next_level(self):
         # Main function to generate game node for AI action evaluation
         if len(self.children) == 0:
             if self.level == 0 or self.level == 2:
-                self.generateNextLevelForPlayerMove()
+                self.generate_next_level_for_player_move()
             else:
-                self.generateNextLevelForAgents()
+                self.generate_next_level_for_agents()
         else:
             for child in self.children:
-                child.generateNextLevel()
+                child.generate_next_level()
 
-    def generateNextLevelForPlayerMove(self):
+    def generate_next_level_for_player_move(self):
         # It generates node if its a player turn, 6 possible moves
         for move in range(1, 7):
             newGame = deepcopy(self.game)
             newGame.play_turn(move, False)
-            gameNode = GameNode(newGame, (self.level + 1) % 4)
-            self.children.append(gameNode)
+            node = gameNode(newGame, (self.level + 1) % 4)
+            self.children.append(node)
 
-    def generateNextLevelForAgents(self):
+    def generate_next_level_for_agents(self):
         # It generates node if its AI turn, its more complicated because this function
         # try to guess next new agent position
-        for y in range(0, len(self.game.map.map)):
-            for x in range(0, len(self.game.map.map[y])):
-                if self.game.map.map[y][x].value == '':
-                    newGame = deepcopy(self.game)
-                    newAgent = agent()
-                    newAgent.player = newGame.curr_turn
-                    newAgent.pos_x = x
-                    newAgent.pos_y = y
-                    newGame.agents.append(newAgent)
-                    newGame.finished = newGame.map.update_map(newGame.agents)
-                    gameNode = GameNode(newGame, (self.level + 1) % 4)
-                    self.children.append(gameNode)
+        for y in range(0, len(self.game.map.map_area)):
+            for x in range(0, len(self.game.map.map_area[y])):
+                if self.game.map.map_area[y][x].value == '':
+                    new_game = deepcopy(self.game)
+                    new_agent = agent()
+                    new_agent.player = new_game.curr_turn
+                    new_agent.pos_x = x
+                    new_agent.pos_y = y
+                    new_game.agents.append(new_agent)
+                    new_game.finished = new_game.map.update_map(new_game.agents)
+                    node = gameNode(new_game, (self.level + 1) % 4)
+                    self.children.append(node)
 
     def evaluate(self):
         # The most important function in AI mode, it evaluates profitability of specific move and its consequences
@@ -357,331 +340,371 @@ class GameNode:
             result = 0
             if self.game.finished:
                 return 1000
-
-            for agent in self.game.agents:
-                if agent.player == 1:
+            for elem in self.game.agents:
+                if elem.player == 1:
                     result = result - 1
                 else:
                     result = result + 1
             return result
+
         elif self.level == 0:
-            max = -1000000
+            max_val = -1000000
             for child in self.children:
-                childEveluation = child.evaluate()
-                if childEveluation > max:
-                    max = childEveluation
-            return max
+                child_evaluation = child.evaluate()
+                if child_evaluation > max_val:
+                    max_val = child_evaluation
+            return max_val
+
         elif self.level == 1 or self.level == 3:
-            sum = 0
+            sum_val = 0
             for child in self.children:
-                childEveluation = child.evaluate()
-                sum = sum + childEveluation
-            return sum / len(self.children)
+                child_evaluation = child.evaluate()
+                sum_val = sum_val + child_evaluation
+            return sum_val / len(self.children)
+
         else:
-            min = 1000000
+            min_val = 1000000
             for child in self.children:
-                childEveluation = child.evaluate()
-                if childEveluation < min:
-                    min = childEveluation
-            return min
+                child_evaluation = child.evaluate()
+                if child_evaluation < min_val:
+                    min_val = child_evaluation
+            return min_val
 
 
-class MainWindow(QMainWindow, Ui_MainWindow, QWidget):
-    # Class connected with main QT window, it contains button functions and calls all program actions
-    def __init__(self):
-        QMainWindow.__init__(self)
+class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
+    def __init__(self, init, nickname, parent=None):
+        self.parent = parent
         self.game = None
         self.in_game = False
         self.ai = False
         self.in_progress = False
-        self.Connection = False
-        self.current_player = 0
+        self.ai_depth_search = 3
+        self.player = nickname
         self.hexpolygons = []
         self.hextexts = []
 
+        QMainWindow.__init__(self, parent)
         self.setupUi(self)
         self.setWindowTitle("2048 - HexEdition")
-        self.createGraphicScene()
-        self.show()
-        self.threadpool = QThreadPool()
-
-        self.NewButton.clicked.connect(self.NewGame)
-        self.QuitButton.clicked.connect(self.Quit)
-        self.TRButton.clicked.connect(self.TRFunction)
-        self.RButton.clicked.connect(self.RBFunction)
-        self.BRButton.clicked.connect(self.BRFunction)
-        self.BLButton.clicked.connect(self.BLFunction)
-        self.LButton.clicked.connect(self.LBFunction)
-        self.TLButton.clicked.connect(self.TLFunction)
-        self.SaveGameButton.clicked.connect(self.SaveGameFunction)
-        self.LoadButton.clicked.connect(self.LoadFunction)
-        self.AIButton.clicked.connect(self.PlayAI)
-
-    def createGraphicScene(self):
+        self.label_player.setText(self.player)
         self.scene = QGraphicsScene()
-        self.WhiteBrush = QBrush(Qt.white)
-        self.RedBrush = QBrush(Qt.red)
-        self.BlueBrush = QBrush(Qt.blue)
+        self.white_brush = QBrush(Qt.white)
+        self.red_brush = QBrush(Qt.red)
+        self.blue_brush = QBrush(Qt.blue)
         self.pen = QPen(Qt.black)
         self.pen.setWidth(2)
-        self.graphicsView.setScene(self.scene)
-        self.CreateHexMap()
+        self.graphics_view.setScene(self.scene)
 
-    def CreateHexMap(self):
-        a = 32
-        h = a * np.sqrt(3)/2
-        for j in range(5):
-            polygons_line = []
-            for i in range(5+j):
-                polygon = QPolygonF()
-                polygon.append(QPointF(0 + 2*i*h - j*h, -1*a/2 + 3*a/2*j))
-                polygon.append(QPointF(h + 2*i*h - j*h, -1*a + 3*a/2*j))
-                polygon.append(QPointF(2*h + 2*i*h - j*h, -1*a/2 + 3*a/2*j))
-                polygon.append(QPointF(2*h + 2*i*h - j*h, a/2 + 3*a/2*j))
-                polygon.append(QPointF(h + 2*i*h - j*h, a + 3*a/2*j))
-                polygon.append(QPointF(0 + 2*i*h - j*h, a/2 + 3*a/2*j))
-                polygons_line.append(self.scene.addPolygon(polygon, self.pen))
-            self.hexpolygons.append(polygons_line)
+        self.create_hex_map()
+        self.show()
+        self.threadpool = QThreadPool()
+        self.tr_button.clicked.connect(self.tr_function)
+        self.r_button.clicked.connect(self.r_function)
+        self.br_button.clicked.connect(self.br_function)
+        self.bl_button.clicked.connect(self.bl_function)
+        self.l_button.clicked.connect(self.l_function)
+        self.tl_button.clicked.connect(self.tl_function)
+        self.save_game_button.clicked.connect(self.save_game_function)
+        self.menu_button.clicked.connect(self.menu_function)
+        if init == 'New':
+            self.new_game()
+            self.player_2 = 'Player 2'
+        elif init == 'Load':
+            self.load_function()
+        elif init == 'Ai':
+            self.play_ai()
+            self.player_2 = 'AI'
 
-        for j in range(4):
-            polygons_line = []
-            for i in range(8-j):
-                polygon = QPolygonF()
-                polygon.append(QPointF(-3*h + 2*i*h + j*h, 14*a/2 + 3*a/2*j))
-                polygon.append(QPointF(-2*h + 2*i*h + j*h, 13*a/2 + 3*a/2*j))
-                polygon.append(QPointF(-1*h + 2*i*h + j*h, 14*a/2 + 3*a/2*j))
-                polygon.append(QPointF(-1*h + 2*i*h + j*h, 16*a/2 + 3*a/2*j))
-                polygon.append(QPointF(-2*h + 2*i*h + j*h, 17*a/2 + 3*a/2*j))
-                polygon.append(QPointF(-3*h + 2*i*h + j*h, 16*a/2 + 3*a/2*j))
-                polygons_line.append(self.scene.addPolygon(polygon, self.pen))
-            self.hexpolygons.append(polygons_line)
-
-        for j in range(5):
-            hextext_line = []
-            for i in range(5 + j):
-                text = self.scene.addSimpleText("")
-                text.setPos(h/2 + 2*h*i - h*j, -10 + 3*a/2*j)
-                text.setScale(1.1)
-                hextext_line.append(text)
-            self.hextexts.append(hextext_line)
-
-        for j in range(4):
-            hextext_line = []
-            for i in range(8 - j):
-                text = self.scene.addSimpleText("")
-                text.setPos(-5*h/2 + 2*h*i + h*j, 231 + 3*a/2*j)
-                text.setScale(1.1)
-                hextext_line.append(text)
-            self.hextexts.append(hextext_line)
-
-    def UpdateHexMap(self, agents, curr_turn, finished):
-        if curr_turn % 2 == 0:
-            self.Label_player.setText('RED')
-        else:
-            self.Label_player.setText('BLUE')
-        for lines in self.hexpolygons:
-            for element in lines:
-                element.setBrush(self.WhiteBrush)
-        for lines in self.hextexts:
-            for element in lines:
-                element.setText("")
-
-        for agent in agents:
-            str_val = str(agent.value)
-            if len(str_val) == 1:
-                str_val = "   " + str_val
-            elif len(str_val) == 2:
-                str_val = "  " + str_val
-            elif len(str_val) == 3:
-                str_val = " " + str_val
-            if agent.player == 0:
-                self.hexpolygons[agent.pos_y][agent.pos_x].setBrush(self.RedBrush)
-            else:
-                self.hexpolygons[agent.pos_y][agent.pos_x].setBrush(self.BlueBrush)
-            self.hextexts[agent.pos_y][agent.pos_x].setText(str_val)
-
-        if finished:
-            print("Player: ", curr_turn, " Won the game!")
-
-    def NewGame(self):
+    def new_game(self):
         if not self.in_progress:
-            self.game = Game(self.Connection, 0)
+            self.game = game(0, self.player)
             self.in_game = True
             self.ai = False
-            self.UpdateHexMap(self.game.agents, self.game.curr_turn, self.game.finished)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
 
-    def Quit(self):
-        app.quit()
-
-    def TRFunction(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(1)
-            self.UpdateHexMap(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = Thread(self.PlayTurnAI)
-                worker.signals.game.connect(self.UpdateMapThread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def RBFunction(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(2)
-            self.UpdateHexMap(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = Thread(self.PlayTurnAI)
-                worker.signals.game.connect(self.UpdateMapThread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def BRFunction(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(3)
-            self.UpdateHexMap(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = Thread(self.PlayTurnAI)
-                worker.signals.game.connect(self.UpdateMapThread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def BLFunction(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(4)
-            self.UpdateHexMap(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = Thread(self.PlayTurnAI)
-                worker.signals.game.connect(self.UpdateMapThread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def LBFunction(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(5)
-            self.UpdateHexMap(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = Thread(self.PlayTurnAI)
-                worker.signals.game.connect(self.UpdateMapThread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def TLFunction(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(6)
-            self.UpdateHexMap(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = Thread(self.PlayTurnAI)
-                worker.signals.game.connect(self.UpdateMapThread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def SaveGameFunction(self):
-        if self.in_game and not self.in_progress:
-            data = ET.tostring(self.game.GameHistory)
-            file = open("game_history.xml", "wb")
-            file.write(data)
-            print("Game Saved Successfully")
-        else:
-            pass
-
-    def PlayAI(self):
-        if self.Connection:
-            pass
-        if not self.in_progress:
-            self.ai = True
-            self.game = Game(self.Connection, 1)
-            self.in_game = True
-            self.UpdateHexMap(self.game.agents, self.game.curr_turn, self.game.finished)
-
-    def PlayTurnAI(self, game_callback):
-        if self.in_game and self.ai:
-            self.in_progress = True
-            game_callback.emit(self.game)
-            time.sleep(1)
-            gameNode = GameNode(self.game, 0)
-            for i in range(0, AI_DEPTH_SEARCH):
-                gameNode.generateNextLevel()
-
-            max = -100000
-            moveEvaluations = []
-            bestEvaluations = []
-            for i in range(0, 6):
-                if self.game.curr_turn == 0:
-                    moveEvaluations.append(-1 * gameNode.children[i].evaluate())
-                else:
-                    moveEvaluations.append(gameNode.children[i].evaluate())
-                # print(i+1, ': ', moveEvaluations[i])
-                if moveEvaluations[i] > max:
-                    max = moveEvaluations[i]
-
-            for i in range(0, 6):
-                if moveEvaluations[i] == max:
-                    bestEvaluations.append(i+1)
-            bestMove = random.choice(bestEvaluations)
-
-            print('best move: ', bestMove, ' (', max, ')')
-            self.game.play_turn(bestMove)
-            self.in_progress = False
-            game_callback.emit(self.game)
-        else:
-            pass
-
-    def UpdateMapThread(self, game):
-        LoadedGame = game
-        self.UpdateHexMap(LoadedGame.agents, LoadedGame.curr_turn, LoadedGame.finished)
-
-    def LoadFunction(self):
-        if self.Connection:
-            pass
-        elif os.path.exists('game_history.xml'):
-            worker = Thread(self.Replay)
-            worker.signals.game.connect(self.UpdateMapThread)
+    def load_function(self):
+        if os.path.exists('game_history.xml'):
+            worker = thread(self.replay)
+            worker.signals.game.connect(self.update_map_thread)
             self.threadpool.start(worker)
             print("Game Loaded Successfully")
         else:
             print("Cant find game_history.xml")
             print("Create your game history!")
 
-    def Replay(self, game_callback):
-        tree = ET.parse('game_history.xml')
+    def play_ai(self):
+        if not self.in_progress:
+            self.ai = True
+            self.game = game(1, self.player)
+            self.in_game = True
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+
+    def create_hex_map(self):
+        side_len = 32
+        height = side_len * np.sqrt(3)/2
+        for j in range(5):
+            polygons_line = []
+            for i in range(5+j):
+                polygon = QPolygonF()
+                polygon.append(QPointF(0 + 2*i*height - j*height, -1*side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(height + 2*i*height - j*height, -1*side_len + 3*side_len/2*j))
+                polygon.append(QPointF(2*height + 2*i*height - j*height, -1*side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(2*height + 2*i*height - j*height, side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(height + 2*i*height - j*height, side_len + 3*side_len/2*j))
+                polygon.append(QPointF(0 + 2*i*height - j*height, side_len/2 + 3*side_len/2*j))
+                polygons_line.append(self.scene.addPolygon(polygon, self.pen))
+            self.hexpolygons.append(polygons_line)
+        for j in range(4):
+            polygons_line = []
+            for i in range(8-j):
+                polygon = QPolygonF()
+                polygon.append(QPointF(-3*height + 2*i*height + j*height, 14*side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(-2*height + 2*i*height + j*height, 13*side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(-1*height + 2*i*height + j*height, 14*side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(-1*height + 2*i*height + j*height, 16*side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(-2*height + 2*i*height + j*height, 17*side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(-3*height + 2*i*height + j*height, 16*side_len/2 + 3*side_len/2*j))
+                polygons_line.append(self.scene.addPolygon(polygon, self.pen))
+            self.hexpolygons.append(polygons_line)
+        for j in range(5):
+            hextext_line = []
+            for i in range(5 + j):
+                text = self.scene.addSimpleText("")
+                text.setPos(height/2 + 2*height*i - height*j, -10 + 3*side_len/2*j)
+                text.setScale(1.1)
+                hextext_line.append(text)
+            self.hextexts.append(hextext_line)
+        for j in range(4):
+            hextext_line = []
+            for i in range(8 - j):
+                text = self.scene.addSimpleText("")
+                text.setPos(-5*height/2 + 2*height*i + height*j, 231 + 3*side_len/2*j)
+                text.setScale(1.1)
+                hextext_line.append(text)
+            self.hextexts.append(hextext_line)
+
+    def update_hex_map(self, agents, curr_turn, finished):
+        if curr_turn % 2 == 0:
+            self.label_player.setText(self.player)
+            self.label_color.setText('Red')
+        else:
+            self.label_player.setText(self.player_2)
+            self.label_color.setText('Blue')
+        for lines in self.hexpolygons:
+            for element in lines:
+                element.setBrush(self.white_brush)
+        for lines in self.hextexts:
+            for element in lines:
+                element.setText("")
+        for elem in agents:
+            str_val = str(elem.value)
+            if len(str_val) == 1:
+                str_val = "   " + str_val
+            elif len(str_val) == 2:
+                str_val = "  " + str_val
+            elif len(str_val) == 3:
+                str_val = " " + str_val
+            if elem.player == 0:
+                self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(self.red_brush)
+            else:
+                self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(self.blue_brush)
+            self.hextexts[elem.pos_y][elem.pos_x].setText(str_val)
+        if finished:
+            if curr_turn == 1:
+                print(self.player, " Won the game!")
+            else:
+                print(self.player_2, " Won the game!")
+            time.sleep(2)
+            self.close()
+            self.parent.show()
+
+    def tr_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(1)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            if self.ai:
+                worker = thread(self.play_turn_ai)
+                worker.signals.game.connect(self.update_map_thread)
+                self.threadpool.start(worker)
+        else:
+            pass
+
+    def r_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(2)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            if self.ai:
+                worker = thread(self.play_turn_ai)
+                worker.signals.game.connect(self.update_map_thread)
+                self.threadpool.start(worker)
+        else:
+            pass
+
+    def br_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(3)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            if self.ai:
+                worker = thread(self.play_turn_ai)
+                worker.signals.game.connect(self.update_map_thread)
+                self.threadpool.start(worker)
+        else:
+            pass
+
+    def bl_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(4)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            if self.ai:
+                worker = thread(self.play_turn_ai)
+                worker.signals.game.connect(self.update_map_thread)
+                self.threadpool.start(worker)
+        else:
+            pass
+
+    def l_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(5)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            if self.ai:
+                worker = thread(self.play_turn_ai)
+                worker.signals.game.connect(self.update_map_thread)
+                self.threadpool.start(worker)
+        else:
+            pass
+
+    def tl_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(6)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            if self.ai:
+                worker = thread(self.play_turn_ai)
+                worker.signals.game.connect(self.update_map_thread)
+                self.threadpool.start(worker)
+        else:
+            pass
+
+    def save_game_function(self):
+        if self.in_game and not self.in_progress:
+            data = et.tostring(self.game.game_history)
+            file = open("game_history.xml", "wb")
+            file.write(data)
+            print("Game Saved Successfully")
+        else:
+            pass
+
+    def menu_function(self):
+        self.close()
+        self.parent.show()
+
+    def play_turn_ai(self, game_callback):
+        if self.in_game and self.ai and not self.game.finished:
+            self.in_progress = True
+            max_val = -100000
+            move_evaluations = []
+            best_evaluations = []
+
+            game_callback.emit(self.game)
+            time.sleep(1)
+            game_node = gameNode(self.game, 0)
+            for i in range(0, self.ai_depth_search):
+                game_node.generate_next_level()
+            for i in range(0, 6):
+                if self.game.curr_turn == 0:
+                    move_evaluations.append(-1 * game_node.children[i].evaluate())
+                else:
+                    move_evaluations.append(game_node.children[i].evaluate())
+                if move_evaluations[i] > max_val:
+                    max_val = move_evaluations[i]
+            for i in range(0, 6):
+                if move_evaluations[i] == max_val:
+                    best_evaluations.append(i+1)
+            bestMove = random.choice(best_evaluations)
+            print('best move: ', bestMove, ' (', max_val, ')')
+            self.game.play_turn(bestMove)
+            self.in_progress = False
+            game_callback.emit(self.game)
+        else:
+            pass
+
+    def update_map_thread(self, game):
+        loaded_game = game
+        self.update_hex_map(loaded_game.agents, loaded_game.curr_turn, loaded_game.finished)
+
+    def replay(self, game_callback):
+        tree = et.parse('game_history.xml')
         root = tree.getroot()
-        self.game = Game(self.Connection, root.attrib['AI'])
+        self.player = root.attrib['Nickname']
+        if root.attrib['AI'] == '1':
+            self.ai = True
+            self.player_2 = 'AI'
+        else:
+            self.ai = False
+            self.player_2 = 'Player 2'
+        self.game = game(root.attrib['AI'], self.player)
         self.in_game = True
         self.in_progress = True
 
         for elem in root:
             self.game.agents.clear()
-            self.game.turn = int(elem.attrib['number'])
+            self.game.turn = int(elem.attrib['Number'])
             for subelem in elem:
-                NewAgent = agent()
-                NewAgent.pos_x = int(subelem.attrib['X'])
-                NewAgent.pos_y = int(subelem.attrib['Y'])
-                NewAgent.player = int(subelem.attrib['player'])
-                NewAgent.value = int(subelem.text)
-                self.game.agents.append(NewAgent)
+                new_agent = agent()
+                new_agent.pos_x = int(subelem.attrib['X'])
+                new_agent.pos_y = int(subelem.attrib['Y'])
+                new_agent.player = int(subelem.attrib['Player'])
+                new_agent.value = int(subelem.text)
+                self.game.agents.append(new_agent)
             self.game.update_turn()
             game_callback.emit(self.game)
             time.sleep(1)
         self.in_progress = False
-        if root.attrib['AI'] == '1':
-            self.ai = True
-        else:
-            self.ai = False
         game_callback.emit(self.game)
 
-    def TurnFunction(self):
-        if self.current_player == 1 and self.Connection:
-            self.current_player = 0
-            self.game.wait_rival()
-            self.UpdateHexMap(self.game.agents, self.game.curr_turn, self.game.finished)
+
+class startWindow(QMainWindow, Ui_StartWindow, QWidget):
+    def __init__(self):
+        QMainWindow.__init__(self)
+        self.setupUi(self)
+        self.setWindowTitle("2048 - HexEdition - Menu")
+        self.show()
+
+        self.new_button.clicked.connect(self.new_game)
+        self.quit_button.clicked.connect(self.quit)
+        self.load_button.clicked.connect(self.load_function)
+        self.ai_button.clicked.connect(self.play_ai)
+        self.scores_button.clicked.connect(self.scores)
+
+    def new_game(self):
+        main_window = mainWindow('New', self.get_nickname(), self)
+        main_window.show()
+        self.hide()
+
+    def quit(self):
+        app.quit()
+
+    def load_function(self):
+        main_window = mainWindow('Load', '', self)
+        main_window.show()
+        self.hide()
+
+    def play_ai(self):
+        main_window = mainWindow('Ai', self.get_nickname(), self)
+        main_window.show()
+        self.hide()
+
+    def scores(self):
+        print('test')
+
+    def get_nickname(self):
+        if str(self.nick_edit.toPlainText()) != '':
+            return str(self.nick_edit.toPlainText())
+        else:
+            return 'User'
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    mainWindow = MainWindow()
-    mainWindow.show()
+    start_window = startWindow()
+    start_window.show()
     sys.exit(app.exec_())
