@@ -17,7 +17,7 @@ class Ui_StartWindow(object):
     def setupUi(self, StartWindow):
         if not StartWindow.objectName():
             StartWindow.setObjectName(u"StartWindow")
-        StartWindow.resize(251, 268)
+        StartWindow.resize(251, 307)
         StartWindow.setStyleSheet(u"background-color: rgb(251, 255, 243);\n"
 "border-color: rgb(185, 163, 126);")
         self.centralwidget = QWidget(StartWindow)
@@ -39,17 +39,17 @@ class Ui_StartWindow(object):
         self.ai_button.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.load_button = QPushButton(self.centralwidget)
         self.load_button.setObjectName(u"load_button")
-        self.load_button.setGeometry(QRect(70, 130, 101, 31))
+        self.load_button.setGeometry(QRect(70, 170, 101, 31))
         self.load_button.setFont(font)
         self.load_button.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.scores_button = QPushButton(self.centralwidget)
         self.scores_button.setObjectName(u"scores_button")
-        self.scores_button.setGeometry(QRect(70, 170, 101, 31))
+        self.scores_button.setGeometry(QRect(70, 210, 101, 31))
         self.scores_button.setFont(font)
         self.scores_button.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.quit_button = QPushButton(self.centralwidget)
         self.quit_button.setObjectName(u"quit_button")
-        self.quit_button.setGeometry(QRect(70, 210, 101, 31))
+        self.quit_button.setGeometry(QRect(70, 250, 101, 31))
         self.quit_button.setFont(font)
         self.quit_button.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.nick_edit = QTextEdit(self.centralwidget)
@@ -67,6 +67,11 @@ class Ui_StartWindow(object):
         self.label_text_nickname.setGeometry(QRect(20, 10, 81, 31))
         self.label_text_nickname.setFont(font1)
         self.label_text_nickname.setAlignment(Qt.AlignCenter)
+        self.multi_button = QPushButton(self.centralwidget)
+        self.multi_button.setObjectName(u"multi_button")
+        self.multi_button.setGeometry(QRect(70, 130, 101, 31))
+        self.multi_button.setFont(font)
+        self.multi_button.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         StartWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QStatusBar(StartWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -86,5 +91,6 @@ class Ui_StartWindow(object):
         self.quit_button.setText(QCoreApplication.translate("StartWindow", u"Quit", None))
         self.nick_edit.setPlaceholderText(QCoreApplication.translate("StartWindow", u"User", None))
         self.label_text_nickname.setText(QCoreApplication.translate("StartWindow", u"Nickname", None))
+        self.multi_button.setText(QCoreApplication.translate("StartWindow", u"Multiplayer", None))
     # retranslateUi
 

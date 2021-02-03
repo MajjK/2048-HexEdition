@@ -1,6 +1,7 @@
-import xml.etree.ElementTree as et
-from Hex2048 import Ui_MainWindow
 from Hex2048_Menu import Ui_StartWindow
+from Hex2048_Multi import Ui_MultiWindow
+from Hex2048 import Ui_MainWindow
+import xml.etree.ElementTree as et
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
@@ -9,16 +10,16 @@ import numpy as np
 import traceback
 import os.path
 import random
+import json
 import time
 import sys
+import re
 # pyside2-uic Hex2048.ui > Hex2048.py
-# Sterowanie przyciskami
-# Tworzenie tablicy wyników
-# Rozbić na pliki klas
-
+# Koniec Gry w przypadku braku ruchów
 # Przerwa pomiedzy ruchem a wygenerowaniem nowego agenta
-# Dodać Multi - Nowe Okno do wczytania/wpisania danych i wystartowania połączenia
-# Dodać Animacje Ruchu
+# Dodać Multi
+# Rozbić na pliki klas
+# **Dodać Animacje Ruchu
 
 
 class threadSignals(QObject):
@@ -78,7 +79,7 @@ class map:
             self.map_area[elem.pos_y][elem.pos_x].update_field(elem)
             if elem.value > max_value:
                 max_value = elem.value
-        if max_value >= 1024:
+        if max_value >= 2048:
             finished = True
         return finished
 
@@ -91,19 +92,59 @@ class game:
         self.finished = False
         self.turn = 0
         self.curr_turn = 0
+        self.ai_mode = str(ai)
+        self.player = str(player)
+        self.record = 2
+        self.root = None
         self.game_history = et.Element('Game')
-        self.game_history.set('AI', str(ai))
-        self.game_history.set('Nickname', str(player))
+        self.game_history.set('AI', self.ai_mode)
+        self.game_history.set('Nickname', self.player)
+        self.init_scoreboards()
 
         new_agent_1 = agent()
         new_agent_1.create_agent(0, self.map.map_area)
         self.agents.append(new_agent_1)
         self.finished = self.map.update_map(self.agents)
-
         new_agent_2 = agent()
         new_agent_2.create_agent(1, self.map.map_area)
         self.agents.append(new_agent_2)
         self.update_turn()
+
+    def init_scoreboards(self):
+        if os.path.exists('scoreboards.xml'):
+            scoreboards_tree = et.parse('scoreboards.xml')
+            self.root = scoreboards_tree.getroot()
+            users = {}
+            for elem in self.root:
+                users[elem.attrib['Nickname']] = int(elem.attrib['Score'])
+            if self.player in users:
+                self.record = users[self.player]
+            else:
+                user = et.SubElement(self.root, "User")
+                user.set('Nickname', self.player)
+                user.set('Score', str(self.record))
+                data = et.tostring(self.root)
+                file = open("scoreboards.xml", "wb")
+                file.write(data)
+        else:
+            self.root = et.Element('Scores')
+            user = et.SubElement(self.root, 'User')
+            user.set('Nickname', self.player)
+            user.set('Score', str(self.record))
+            data = et.tostring(self.root)
+            file = open("scoreboards.xml", "wb")
+            file.write(data)
+
+    def update_scoreboards(self):
+        for elem_agents in self.agents:
+            if elem_agents.value > self.record and elem_agents.player == 0:
+                self.record = elem_agents.value
+                for elem_root in self.root:
+                    if elem_root.attrib['Nickname'] == self.player:
+                        elem_root.attrib['Score'] = str(self.record)
+                data = et.tostring(self.root)
+                file = open("scoreboards.xml", "wb")
+                file.write(data)
 
     def update_history(self):
         turn = et.SubElement(self.game_history, 'Turn')
@@ -150,6 +191,7 @@ class game:
         self.finished = self.map.update_map(self.agents)
         self.curr_turn = self.turn % 2
         self.update_history()
+        self.update_scoreboards()
 
 
 class field:
@@ -406,6 +448,12 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         self.tl_button.clicked.connect(self.tl_function)
         self.save_game_button.clicked.connect(self.save_game_function)
         self.menu_button.clicked.connect(self.menu_function)
+        self.tr_keyboard = QShortcut(QKeySequence(Qt.Key_Up, Qt.Key_Right), self.tr_button, self.tr_function)
+        self.r_keyboard = QShortcut(QKeySequence(Qt.Key_Right), self.r_button, self.r_function)
+        self.br_keyboard = QShortcut(QKeySequence(Qt.Key_Down, Qt.Key_Right), self.br_button, self.br_function)
+        self.bl_keyboard = QShortcut(QKeySequence(Qt.Key_Down, Qt.Key_Left), self.bl_button, self.bl_function)
+        self.l_keyboard = QShortcut(QKeySequence(Qt.Key_Left), self.l_button, self.l_function)
+        self.tl_keyboard = QShortcut(QKeySequence(Qt.Key_Up, Qt.Key_Left), self.tl_button, self.tl_function)
         if init == 'New':
             self.new_game()
             self.player_2 = 'Player 2'
@@ -663,28 +711,21 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
 
 
 class startWindow(QMainWindow, Ui_StartWindow, QWidget):
-    def __init__(self):
-        QMainWindow.__init__(self)
+    def __init__(self, parent=None):
+        QMainWindow.__init__(self, parent)
         self.setupUi(self)
         self.setWindowTitle("2048 - HexEdition - Menu")
         self.show()
 
         self.new_button.clicked.connect(self.new_game)
-        self.quit_button.clicked.connect(self.quit)
-        self.load_button.clicked.connect(self.load_function)
         self.ai_button.clicked.connect(self.play_ai)
+        self.multi_button.clicked.connect(self.multi)
+        self.load_button.clicked.connect(self.load)
         self.scores_button.clicked.connect(self.scores)
+        self.quit_button.clicked.connect(self.quit)
 
     def new_game(self):
         main_window = mainWindow('New', self.get_nickname(), self)
-        main_window.show()
-        self.hide()
-
-    def quit(self):
-        app.quit()
-
-    def load_function(self):
-        main_window = mainWindow('Load', '', self)
         main_window.show()
         self.hide()
 
@@ -693,14 +734,81 @@ class startWindow(QMainWindow, Ui_StartWindow, QWidget):
         main_window.show()
         self.hide()
 
+    def multi(self):
+        multi_window = multiWindow(self.get_nickname(), self)
+        multi_window.show()
+        self.hide()
+
+    def load(self):
+        main_window = mainWindow('Load', '', self)
+        main_window.show()
+        self.hide()
+
     def scores(self):
-        print('test')
+        if os.path.exists('scoreboards.xml'):
+            scoreboards_tree = et.parse('scoreboards.xml')
+            root = scoreboards_tree.getroot()
+            for elem in root:
+                print(elem.attrib['Nickname'], " - ", elem.attrib['Score'])
+        else:
+            print("Your Scoreboard does not exist!")
+
+    def quit(self):
+        app.quit()
 
     def get_nickname(self):
         if str(self.nick_edit.toPlainText()) != '':
             return str(self.nick_edit.toPlainText())
         else:
             return 'User'
+
+
+class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
+    def __init__(self, nickname, parent=None):
+        self.parent = parent
+        self.port = ''
+        self.address = ''
+
+        QMainWindow.__init__(self, parent)
+        self.setupUi(self)
+        self.setWindowTitle("2048 - HexEdition - Multiplayer")
+        self.show()
+
+        self.connect_button.clicked.connect(self.connect)
+        self.server_button.clicked.connect(self.server)
+        self.menu_button.clicked.connect(self.menu)
+        self.save_config_button.clicked.connect(self.save_config)
+        self.load_config_button.clicked.connect(self.load_config)
+
+    def connect(self):
+        main_window = mainWindow('New', self.get_nickname(), self)
+        main_window.show()
+        self.hide()
+
+    def server(self):
+        main_window = mainWindow('Ai', self.get_nickname(), self)
+        main_window.show()
+        self.hide()
+
+    def menu(self):
+        self.close()
+        self.parent.show()
+
+    def save_config(self):
+        self.port = self.port_edit.toPlainText()
+        self.address = self.address_edit.toPlainText()
+        if re.search('[a-zA-Z]', self.address) is None and re.search('[a-zA-Z]', self.port) is None:
+            data = {'config': []}
+            data['config'].append({'Address': self.address, 'Port': int(self.port)})
+            with open('config.json', 'w') as outfile:
+                json.dump(data, outfile)
+        else:
+            print('Wrong Address or Port')
+
+    def load_config(self):
+        main_window = mainWindow('Ai', self.get_nickname(), self)
+        main_window.show()
+        self.hide()
 
 
 if __name__ == '__main__':
