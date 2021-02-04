@@ -4,9 +4,9 @@ The project is a hexagonal version of popular "2048" game. It's an expanded cont
 The game offers singleplayer mode(versus AI based on min-max algorithm), hot-seat mode for two players and multiplayer mode which offers possibility to play by LAN.
 
 ## Screenshots
-![Menu_Screenshot](./img/menu.png)
-![In-game_Screenshot](./img/in_game.png)
-![In-game_Screenshot](./img/in_game_2.png)
+![Menu_Screenshot](./img/menu.png) <br/>
+![In-game_Screenshot](./img/in_game.png) <br/>
+![In-game_Screenshot](./img/in_game_2.png) <br/>
 
 ## Technologies used
 * Python 3.6 - Main language.
