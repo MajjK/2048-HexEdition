@@ -1,5 +1,6 @@
 from Hex2048_Menu import Ui_StartWindow
 from Hex2048_Multi import Ui_MultiWindow
+from Hex2048_Scores import Ui_ScoresWindow
 from Hex2048 import Ui_MainWindow
 import xml.etree.ElementTree as et
 from PySide2.QtWidgets import *
@@ -9,17 +10,27 @@ from copy import deepcopy
 import numpy as np
 import traceback
 import os.path
+import socket
 import random
 import json
 import time
 import sys
 import re
 # pyside2-uic Hex2048.ui > Hex2048.py
-# Koniec Gry w przypadku braku ruchów
-# Przerwa pomiedzy ruchem a wygenerowaniem nowego agenta
 # Dodać Multi
 # Rozbić na pliki klas
-# **Dodać Animacje Ruchu
+# Dodać Animacje Ruchu
+
+BUFFER = 100
+Connected = "Connected"
+Start = "Start"
+End = "End"
+TopLeft = "TopLeft"
+TopRight = "TopRight"
+Left = "Left"
+Right = "Right"
+BottomLeft = "BottomLeft"
+BottomRight = "BottomRight"
 
 
 class threadSignals(QObject):
@@ -92,6 +103,7 @@ class game:
         self.finished = False
         self.turn = 0
         self.curr_turn = 0
+        self.ai_depth_search = 3
         self.ai_mode = str(ai)
         self.player = str(player)
         self.record = 2
@@ -181,11 +193,34 @@ class game:
 
         self.finished = self.map.update_map(self.agents)
         self.turn += 1
-        if create_agent:
+        if create_agent and len(self.agents) < 61:
             new_agent = agent()
             new_agent.create_agent(self.turn % 2, self.map.map_area)
             self.agents.append(new_agent)
         self.update_turn()
+
+    def play_turn_ai(self, game_callback):
+        max_val = -100000
+        move_evaluations = []
+        best_evaluations = []
+        time.sleep(1)
+        game_node = gameNode(self, 0)
+        for i in range(0, self.ai_depth_search):
+            game_node.generate_next_level()
+        for i in range(0, 6):
+            if self.curr_turn == 0:
+                move_evaluations.append(-1 * game_node.children[i].evaluate())
+            else:
+                move_evaluations.append(game_node.children[i].evaluate())
+            if move_evaluations[i] > max_val:
+                max_val = move_evaluations[i]
+        for i in range(0, 6):
+            if move_evaluations[i] == max_val:
+                best_evaluations.append(i+1)
+        bestMove = random.choice(best_evaluations)
+        print('best move: ', bestMove, ' (', max_val, ')')
+        self.play_turn(bestMove)
+        game_callback.emit(self)
 
     def update_turn(self):
         self.finished = self.map.update_map(self.agents)
@@ -427,19 +462,19 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
 
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
+        self.threadpool = QThreadPool()
         self.setWindowTitle("2048 - HexEdition")
-        self.label_player.setText(self.player)
         self.scene = QGraphicsScene()
+        self.graphics_view.setScene(self.scene)
         self.white_brush = QBrush(Qt.white)
         self.red_brush = QBrush(Qt.red)
         self.blue_brush = QBrush(Qt.blue)
         self.pen = QPen(Qt.black)
         self.pen.setWidth(2)
-        self.graphics_view.setScene(self.scene)
-
         self.create_hex_map()
         self.show()
-        self.threadpool = QThreadPool()
+
+        self.label_player.setText(self.player)
         self.tr_button.clicked.connect(self.tr_function)
         self.r_button.clicked.connect(self.r_function)
         self.br_button.clicked.connect(self.br_function)
@@ -486,6 +521,113 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             self.game = game(1, self.player)
             self.in_game = True
             self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+
+    def tr_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(1)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            self.ai_init()
+        else:
+            pass
+
+    def r_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(2)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            self.ai_init()
+        else:
+            pass
+
+    def br_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(3)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            self.ai_init()
+        else:
+            pass
+
+    def bl_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(4)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            self.ai_init()
+        else:
+            pass
+
+    def l_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(5)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            self.ai_init()
+        else:
+            pass
+
+    def tl_function(self):
+        if self.in_game and not self.in_progress:
+            self.game.play_turn(6)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            self.ai_init()
+        else:
+            pass
+
+    def save_game_function(self):
+        if self.in_game and not self.in_progress:
+            data = et.tostring(self.game.game_history)
+            file = open("game_history.xml", "wb")
+            file.write(data)
+            print("Game Saved Successfully")
+        else:
+            pass
+
+    def menu_function(self):
+        self.close()
+        self.parent.show()
+
+    def ai_init(self):
+        if self.in_game and self.ai and not self.game.finished:
+            self.in_progress = True
+            worker = thread(self.game.play_turn_ai)
+            worker.signals.game.connect(self.update_map_thread_finished)
+            self.threadpool.start(worker)
+        else:
+            pass
+
+    def update_map_thread_finished(self, game):
+        self.update_hex_map(game.agents, game.curr_turn, game.finished)
+        self.in_progress = False
+
+    def update_map_thread(self, game):
+        self.update_hex_map(game.agents, game.curr_turn, game.finished)
+
+    def replay(self, game_callback):
+        tree = et.parse('game_history.xml')
+        root = tree.getroot()
+        self.player = root.attrib['Nickname']
+        if root.attrib['AI'] == '1':
+            self.ai = True
+            self.player_2 = 'AI'
+        else:
+            self.ai = False
+            self.player_2 = 'Player 2'
+        self.game = game(root.attrib['AI'], self.player)
+        self.in_game = True
+        self.in_progress = True
+
+        for elem in root:
+            self.game.agents.clear()
+            self.game.turn = int(elem.attrib['Number'])
+            for subelem in elem:
+                new_agent = agent()
+                new_agent.pos_x = int(subelem.attrib['X'])
+                new_agent.pos_y = int(subelem.attrib['Y'])
+                new_agent.player = int(subelem.attrib['Player'])
+                new_agent.value = int(subelem.text)
+                self.game.agents.append(new_agent)
+            self.game.update_turn()
+            game_callback.emit(self.game)
+            time.sleep(1)
+        self.in_progress = False
+        game_callback.emit(self.game)
 
     def create_hex_map(self):
         side_len = 32
@@ -566,148 +708,27 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             self.close()
             self.parent.show()
 
-    def tr_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(1)
-            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = thread(self.play_turn_ai)
-                worker.signals.game.connect(self.update_map_thread)
-                self.threadpool.start(worker)
+
+class scoresWindow(QMainWindow, Ui_ScoresWindow, QWidget):
+    def __init__(self, parent=None):
+        self.parent = parent
+        QMainWindow.__init__(self, parent)
+        self.setupUi(self)
+        self.setWindowTitle("2048 - HexEdition - Multiplayer")
+        self.show()
+        if os.path.exists('scoreboards.xml'):
+            scoreboards_tree = et.parse('scoreboards.xml')
+            root = scoreboards_tree.getroot()
+            nicknames_text = ''
+            scores_text = ''
+            for elem in root:
+                nicknames_text += elem.attrib['Nickname'] + '\n'
+                scores_text += elem.attrib['Score'] + '\n'
+            self.nick_text_edit.setPlainText(nicknames_text)
+            self.score_text_edit.setPlainText(scores_text)
         else:
-            pass
-
-    def r_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(2)
-            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = thread(self.play_turn_ai)
-                worker.signals.game.connect(self.update_map_thread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def br_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(3)
-            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = thread(self.play_turn_ai)
-                worker.signals.game.connect(self.update_map_thread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def bl_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(4)
-            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = thread(self.play_turn_ai)
-                worker.signals.game.connect(self.update_map_thread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def l_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(5)
-            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = thread(self.play_turn_ai)
-                worker.signals.game.connect(self.update_map_thread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def tl_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(6)
-            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            if self.ai:
-                worker = thread(self.play_turn_ai)
-                worker.signals.game.connect(self.update_map_thread)
-                self.threadpool.start(worker)
-        else:
-            pass
-
-    def save_game_function(self):
-        if self.in_game and not self.in_progress:
-            data = et.tostring(self.game.game_history)
-            file = open("game_history.xml", "wb")
-            file.write(data)
-            print("Game Saved Successfully")
-        else:
-            pass
-
-    def menu_function(self):
-        self.close()
-        self.parent.show()
-
-    def play_turn_ai(self, game_callback):
-        if self.in_game and self.ai and not self.game.finished:
-            self.in_progress = True
-            max_val = -100000
-            move_evaluations = []
-            best_evaluations = []
-
-            game_callback.emit(self.game)
-            time.sleep(1)
-            game_node = gameNode(self.game, 0)
-            for i in range(0, self.ai_depth_search):
-                game_node.generate_next_level()
-            for i in range(0, 6):
-                if self.game.curr_turn == 0:
-                    move_evaluations.append(-1 * game_node.children[i].evaluate())
-                else:
-                    move_evaluations.append(game_node.children[i].evaluate())
-                if move_evaluations[i] > max_val:
-                    max_val = move_evaluations[i]
-            for i in range(0, 6):
-                if move_evaluations[i] == max_val:
-                    best_evaluations.append(i+1)
-            bestMove = random.choice(best_evaluations)
-            print('best move: ', bestMove, ' (', max_val, ')')
-            self.game.play_turn(bestMove)
-            self.in_progress = False
-            game_callback.emit(self.game)
-        else:
-            pass
-
-    def update_map_thread(self, game):
-        loaded_game = game
-        self.update_hex_map(loaded_game.agents, loaded_game.curr_turn, loaded_game.finished)
-
-    def replay(self, game_callback):
-        tree = et.parse('game_history.xml')
-        root = tree.getroot()
-        self.player = root.attrib['Nickname']
-        if root.attrib['AI'] == '1':
-            self.ai = True
-            self.player_2 = 'AI'
-        else:
-            self.ai = False
-            self.player_2 = 'Player 2'
-        self.game = game(root.attrib['AI'], self.player)
-        self.in_game = True
-        self.in_progress = True
-
-        for elem in root:
-            self.game.agents.clear()
-            self.game.turn = int(elem.attrib['Number'])
-            for subelem in elem:
-                new_agent = agent()
-                new_agent.pos_x = int(subelem.attrib['X'])
-                new_agent.pos_y = int(subelem.attrib['Y'])
-                new_agent.player = int(subelem.attrib['Player'])
-                new_agent.value = int(subelem.text)
-                self.game.agents.append(new_agent)
-            self.game.update_turn()
-            game_callback.emit(self.game)
-            time.sleep(1)
-        self.in_progress = False
-        game_callback.emit(self.game)
+            self.nick_text_edit.setPlainText('Your Scoreboard')
+            self.score_text_edit.setPlainText('does not exist!')
 
 
 class startWindow(QMainWindow, Ui_StartWindow, QWidget):
@@ -745,13 +766,8 @@ class startWindow(QMainWindow, Ui_StartWindow, QWidget):
         self.hide()
 
     def scores(self):
-        if os.path.exists('scoreboards.xml'):
-            scoreboards_tree = et.parse('scoreboards.xml')
-            root = scoreboards_tree.getroot()
-            for elem in root:
-                print(elem.attrib['Nickname'], " - ", elem.attrib['Score'])
-        else:
-            print("Your Scoreboard does not exist!")
+        scores_window = scoresWindow(self)
+        scores_window.show()
 
     def quit(self):
         app.quit()
@@ -766,49 +782,95 @@ class startWindow(QMainWindow, Ui_StartWindow, QWidget):
 class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
     def __init__(self, nickname, parent=None):
         self.parent = parent
-        self.port = ''
+        self.nickname = nickname
+        self.port = 0
         self.address = ''
+        self.conn = None
+        self.socket = None
 
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
         self.setWindowTitle("2048 - HexEdition - Multiplayer")
         self.show()
+        self.load_data()
 
-        self.connect_button.clicked.connect(self.connect)
+        self.connect_button.clicked.connect(self.client)
         self.server_button.clicked.connect(self.server)
         self.menu_button.clicked.connect(self.menu)
-        self.save_config_button.clicked.connect(self.save_config)
-        self.load_config_button.clicked.connect(self.load_config)
 
-    def connect(self):
-        main_window = mainWindow('New', self.get_nickname(), self)
-        main_window.show()
-        self.hide()
+    def send_agent(self, agent, conn):
+        x = agent.pos_x
+        y = agent.pos_y
+        player = agent.player
+        Message = str(player) + " " + str(x) + " " + str(y)
+        conn.sendall(Message.encode())
+
+    def get_agent(self, conn):
+        data = conn.recv(BUFFER)
+        data = data.decode()
+        message = data.split()
+
+        new_agent = agent()
+        new_agent.player = int(message[0])
+        new_agent.pos_x = int(message[1])
+        new_agent.pos_y = int(message[2])
+        new_agent.value = 2
+        self.agents.append(new_agent)
+
+    def client(self):
+        self.port = self.port_edit.toPlainText()
+        self.address = self.address_edit.toPlainText()
+        if re.search('[a-zA-Z]', self.address) is None and re.search('[a-zA-Z]', self.port) is None\
+           and self.address != '' and self.port != '':
+            data = {'config': []}
+            data['config'].append({'Address': self.address, 'Port': int(self.port)})
+            with open('config.json', 'w') as outfile:
+                json.dump(data, outfile)
+
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.connect((self.address, int(self.port)))
+            data = self.socket.recv(BUFFER)
+            data = data.decode()
+            print(data)
+        else:
+            print('Wrong Address or Port')
 
     def server(self):
-        main_window = mainWindow('Ai', self.get_nickname(), self)
-        main_window.show()
-        self.hide()
+        self.port = self.port_edit.toPlainText()
+        self.address = self.address_edit.toPlainText()
+        if re.search('[a-zA-Z]', self.address) is None and re.search('[a-zA-Z]', self.port) is None \
+           and self.address != '' and self.port != '':
+            data = {'config': []}
+            data['config'].append({'Address': self.address, 'Port': int(self.port)})
+            with open('config.json', 'w') as outfile:
+                json.dump(data, outfile)
+
+            print('Server started. Waiting for clients...')
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.bind((self.address, int(self.port)))
+                except socket.error:
+                    return
+                s.listen(2)
+                self.conn, addr1 = s.accept()
+                print('Connected by', addr1)
+                self.conn.sendall(Connected.encode())
+        else:
+            print('Wrong Address or Port')
 
     def menu(self):
         self.close()
         self.parent.show()
 
-    def save_config(self):
-        self.port = self.port_edit.toPlainText()
-        self.address = self.address_edit.toPlainText()
-        if re.search('[a-zA-Z]', self.address) is None and re.search('[a-zA-Z]', self.port) is None:
-            data = {'config': []}
-            data['config'].append({'Address': self.address, 'Port': int(self.port)})
-            with open('config.json', 'w') as outfile:
-                json.dump(data, outfile)
-        else:
-            print('Wrong Address or Port')
-
-    def load_config(self):
-        main_window = mainWindow('Ai', self.get_nickname(), self)
-        main_window.show()
-        self.hide()
+    def load_data(self):
+        if os.path.exists('config.json'):
+            with open('config.json') as json_file:
+                data = json.load(json_file)
+                for p in data['config']:
+                    self.port = int(p['Port'])
+                    self.address = p['Address']
+                    self.port_edit.setText(str(p['Port']))
+                    self.address_edit.setText(str(p['Address']))
 
 
 if __name__ == '__main__':
