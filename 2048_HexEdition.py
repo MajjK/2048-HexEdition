@@ -17,20 +17,8 @@ import time
 import sys
 import re
 # pyside2-uic Hex2048.ui > Hex2048.py
-# Dodać Multi
-# Rozbić na pliki klas
-# Dodać Animacje Ruchu
 
 BUFFER = 100
-Connected = "Connected"
-Start = "Start"
-End = "End"
-TopLeft = "TopLeft"
-TopRight = "TopRight"
-Left = "Left"
-Right = "Right"
-BottomLeft = "BottomLeft"
-BottomRight = "BottomRight"
 
 
 class threadSignals(QObject):
@@ -97,30 +85,30 @@ class map:
 
 class game:
     # Main Class connected with current game instance
-    def __init__(self, ai, player):
+    def __init__(self, ai, multi, player):
         self.agents = []
         self.map = map()
         self.finished = False
         self.turn = 0
         self.curr_turn = 0
         self.ai_depth_search = 3
-        self.ai_mode = str(ai)
         self.player = str(player)
+        self.multi = multi
         self.record = 2
         self.root = None
-        self.game_history = et.Element('Game')
-        self.game_history.set('AI', self.ai_mode)
-        self.game_history.set('Nickname', self.player)
-        self.init_scoreboards()
-
-        new_agent_1 = agent()
-        new_agent_1.create_agent(0, self.map.map_area)
-        self.agents.append(new_agent_1)
-        self.finished = self.map.update_map(self.agents)
-        new_agent_2 = agent()
-        new_agent_2.create_agent(1, self.map.map_area)
-        self.agents.append(new_agent_2)
-        self.update_turn()
+        if self.multi != 'Client':
+            self.init_scoreboards()
+            self.game_history = et.Element('Game')
+            self.game_history.set('AI', str(ai))
+            self.game_history.set('Nickname', self.player)
+            new_agent_1 = agent()
+            new_agent_1.create_agent(0, self.map.map_area)
+            self.agents.append(new_agent_1)
+            self.finished = self.map.update_map(self.agents)
+            new_agent_2 = agent()
+            new_agent_2.create_agent(1, self.map.map_area)
+            self.agents.append(new_agent_2)
+            self.update_turn()
 
     def init_scoreboards(self):
         if os.path.exists('scoreboards.xml'):
@@ -147,9 +135,9 @@ class game:
             file = open("scoreboards.xml", "wb")
             file.write(data)
 
-    def update_scoreboards(self):
+    def update_scoreboards(self, player_color):
         for elem_agents in self.agents:
-            if elem_agents.value > self.record and elem_agents.player == 0:
+            if elem_agents.value > self.record and elem_agents.player == player_color:
                 self.record = elem_agents.value
                 for elem_root in self.root:
                     if elem_root.attrib['Nickname'] == self.player:
@@ -225,8 +213,9 @@ class game:
     def update_turn(self):
         self.finished = self.map.update_map(self.agents)
         self.curr_turn = self.turn % 2
-        self.update_history()
-        self.update_scoreboards()
+        if self.multi != 'Client':
+            self.update_scoreboards(0)
+            self.update_history()
 
 
 class field:
@@ -448,17 +437,87 @@ class gameNode:
             return min_val
 
 
+class multiMode:
+    def __init__(self, multi, socket):
+        self.mode = multi
+        self.socket = socket
+
+    def send_exit(self):
+        message = str(7)
+        self.socket.sendall(message.encode())
+
+    def send_move_and_agent(self, move, agent):
+        message = str(move) + " " + str(agent.player) + " " + str(agent.pos_x) + " " + \
+                  str(agent.pos_y) + " " + str(agent.value)
+        self.socket.sendall(message.encode())
+
+    def get_move_and_agent(self, game, window, parent_window):
+        data = self.socket.recv(BUFFER)
+        data = data.decode()
+        message = data.split()
+        move = int(message[0])
+        if move == 7:
+            print('Your opponent closed connection !')
+            window.close()
+            parent_window.show()
+        else:
+            game.play_turn(int(message[0]), create_agent=False)
+            new_agent = agent()
+            new_agent.player = int(message[1])
+            new_agent.pos_x = int(message[2])
+            new_agent.pos_y = int(message[3])
+            new_agent.value = int(message[4])
+            game.agents.append(new_agent)
+            return game
+
+    def send_agent(self, agent):
+        message_agent = str(agent.player) + " " + str(agent.pos_x) + " " + str(agent.pos_y) + " " + str(agent.value)
+        self.socket.sendall(message_agent.encode())
+
+    def get_agent(self):
+        data = self.socket.recv(BUFFER)
+        data = data.decode()
+        message = data.split()
+        new_agent = agent()
+        new_agent.player = int(message[0])
+        new_agent.pos_x = int(message[1])
+        new_agent.pos_y = int(message[2])
+        new_agent.value = int(message[3])
+        return new_agent
+
+    def nickname_transmission(self, nickname):
+        if self.mode == 'Server':
+            message_nickname = str(nickname)
+            self.socket.sendall(message_nickname.encode())
+            data = self.socket.recv(BUFFER)
+            data = data.decode()
+            player_2 = data
+            if player_2 == 'User':
+                player_2 = 'Opponent'
+            return player_2
+        elif self.mode == 'Client':
+            data = self.socket.recv(BUFFER)
+            data = data.decode()
+            player = data
+            if player == 'User':
+                player = 'Opponent'
+            message_nickname = str(nickname)
+            self.socket.sendall(message_nickname.encode())
+            return player
+
+
 class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
-    def __init__(self, init, nickname, parent=None):
+    def __init__(self, init, nickname, connection, parent=None):
         self.parent = parent
         self.game = None
         self.in_game = False
         self.ai = False
         self.in_progress = False
-        self.ai_depth_search = 3
         self.player = nickname
         self.hexpolygons = []
         self.hextexts = []
+        self.multi = None
+        self.socket = connection
 
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
@@ -490,20 +549,43 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         self.l_keyboard = QShortcut(QKeySequence(Qt.Key_Left), self.l_button, self.l_function)
         self.tl_keyboard = QShortcut(QKeySequence(Qt.Key_Up, Qt.Key_Left), self.tl_button, self.tl_function)
         if init == 'New':
-            self.new_game()
             self.player_2 = 'Player 2'
+            self.new_game()
         elif init == 'Load':
             self.load_function()
         elif init == 'Ai':
-            self.play_ai()
             self.player_2 = 'AI'
-
-    def new_game(self):
-        if not self.in_progress:
-            self.game = game(0, self.player)
+            self.play_ai()
+        elif init == 'Client':
+            self.setWindowTitle("2048 - HexEdition - Client")
+            self.multi = multiMode('Client', self.socket)
             self.in_game = True
             self.ai = False
+            self.player_2 = nickname
+            self.player = self.multi.nickname_transmission(self.player_2)
+            self.game = game(0, self.multi.mode, self.player)
+            self.game.agents.append(self.multi.get_agent())
+            self.game.agents.append(self.multi.get_agent())
             self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+            worker = thread(self.get_move_and_agent_thread)
+            worker.signals.game.connect(self.update_map_thread_finished)
+            self.threadpool.start(worker)
+        elif init == 'Server':
+            self.setWindowTitle("2048 - HexEdition - Server")
+            self.multi = multiMode('Server', self.socket)
+            self.in_game = True
+            self.ai = False
+            self.player_2 = self.multi.nickname_transmission(self.player)
+            self.game = game(0, self.multi.mode, self.player)
+            for elem in self.game.agents:
+                self.multi.send_agent(elem)
+            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+
+    def new_game(self):
+        self.in_game = True
+        self.ai = False
+        self.game = game(0, self.multi, self.player)
+        self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
 
     def load_function(self):
         if os.path.exists('game_history.xml'):
@@ -516,17 +598,22 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             print("Create your game history!")
 
     def play_ai(self):
-        if not self.in_progress:
-            self.ai = True
-            self.game = game(1, self.player)
-            self.in_game = True
-            self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
+        self.in_game = True
+        self.ai = True
+        self.game = game(1, self.multi, self.player)
+        self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
 
     def tr_function(self):
         if self.in_game and not self.in_progress:
             self.game.play_turn(1)
             self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            self.ai_init()
+            if self.ai and not self.game.finished:
+                self.ai_init()
+            if self.multi is not None:
+                self.multi.send_move_and_agent(1, self.game.agents[len(self.game.agents)-1])
+                worker = thread(self.get_move_and_agent_thread)
+                worker.signals.game.connect(self.update_map_thread_finished)
+                self.threadpool.start(worker)
         else:
             pass
 
@@ -534,7 +621,13 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         if self.in_game and not self.in_progress:
             self.game.play_turn(2)
             self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            self.ai_init()
+            if self.ai and not self.game.finished:
+                self.ai_init()
+            if self.multi is not None:
+                self.multi.send_move_and_agent(2, self.game.agents[len(self.game.agents)-1])
+                worker = thread(self.get_move_and_agent_thread)
+                worker.signals.game.connect(self.update_map_thread_finished)
+                self.threadpool.start(worker)
         else:
             pass
 
@@ -542,7 +635,13 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         if self.in_game and not self.in_progress:
             self.game.play_turn(3)
             self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            self.ai_init()
+            if self.ai and not self.game.finished:
+                self.ai_init()
+            if self.multi is not None:
+                self.multi.send_move_and_agent(3, self.game.agents[len(self.game.agents)-1])
+                worker = thread(self.get_move_and_agent_thread)
+                worker.signals.game.connect(self.update_map_thread_finished)
+                self.threadpool.start(worker)
         else:
             pass
 
@@ -550,7 +649,13 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         if self.in_game and not self.in_progress:
             self.game.play_turn(4)
             self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            self.ai_init()
+            if self.ai and not self.game.finished:
+                self.ai_init()
+            if self.multi is not None:
+                self.multi.send_move_and_agent(4, self.game.agents[len(self.game.agents)-1])
+                worker = thread(self.get_move_and_agent_thread)
+                worker.signals.game.connect(self.update_map_thread_finished)
+                self.threadpool.start(worker)
         else:
             pass
 
@@ -558,7 +663,13 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         if self.in_game and not self.in_progress:
             self.game.play_turn(5)
             self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            self.ai_init()
+            if self.ai and not self.game.finished:
+                self.ai_init()
+            if self.multi is not None:
+                self.multi.send_move_and_agent(5, self.game.agents[len(self.game.agents)-1])
+                worker = thread(self.get_move_and_agent_thread)
+                worker.signals.game.connect(self.update_map_thread_finished)
+                self.threadpool.start(worker)
         else:
             pass
 
@@ -566,12 +677,21 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         if self.in_game and not self.in_progress:
             self.game.play_turn(6)
             self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            self.ai_init()
+            if self.ai and not self.game.finished:
+                self.ai_init()
+            if self.multi is not None:
+                self.multi.send_move_and_agent(6, self.game.agents[len(self.game.agents)-1])
+                worker = thread(self.get_move_and_agent_thread)
+                worker.signals.game.connect(self.update_map_thread_finished)
+                self.threadpool.start(worker)
         else:
             pass
 
     def save_game_function(self):
-        if self.in_game and not self.in_progress:
+        if self.multi == 'Client':
+            print("You can't save game in Client Mode!")
+            pass
+        elif self.in_game and not self.in_progress:
             data = et.tostring(self.game.game_history)
             file = open("game_history.xml", "wb")
             file.write(data)
@@ -580,17 +700,22 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             pass
 
     def menu_function(self):
-        self.close()
-        self.parent.show()
+        if not self.in_progress:
+            if self.multi is not None:
+                self.multi.send_exit()
+            self.close()
+            self.parent.show()
 
     def ai_init(self):
-        if self.in_game and self.ai and not self.game.finished:
-            self.in_progress = True
-            worker = thread(self.game.play_turn_ai)
-            worker.signals.game.connect(self.update_map_thread_finished)
-            self.threadpool.start(worker)
-        else:
-            pass
+        self.in_progress = True
+        worker = thread(self.game.play_turn_ai)
+        worker.signals.game.connect(self.update_map_thread_finished)
+        self.threadpool.start(worker)
+
+    def get_move_and_agent_thread(self, game_callback):
+        self.in_progress = True
+        self.game = self.multi.get_move_and_agent(self.game, self, self.parent)
+        game_callback.emit(self.game)
 
     def update_map_thread_finished(self, game):
         self.update_hex_map(game.agents, game.curr_turn, game.finished)
@@ -609,7 +734,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         else:
             self.ai = False
             self.player_2 = 'Player 2'
-        self.game = game(root.attrib['AI'], self.player)
+        self.game = game(root.attrib['AI'], self.multi, self.player)
         self.in_game = True
         self.in_progress = True
 
@@ -659,16 +784,16 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         for j in range(5):
             hextext_line = []
             for i in range(5 + j):
-                text = self.scene.addSimpleText("")
-                text.setPos(height/2 + 2*height*i - height*j, -10 + 3*side_len/2*j)
+                text = self.scene.addSimpleText("", QFont("Arial", bold=True))
+                text.setPos(-5 + height/2 + 2*height*i - height*j, -10 + 3*side_len/2*j)
                 text.setScale(1.1)
                 hextext_line.append(text)
             self.hextexts.append(hextext_line)
         for j in range(4):
             hextext_line = []
             for i in range(8 - j):
-                text = self.scene.addSimpleText("")
-                text.setPos(-5*height/2 + 2*height*i + height*j, 231 + 3*side_len/2*j)
+                text = self.scene.addSimpleText("", QFont("Arial", bold=True))
+                text.setPos(-5 + -5*height/2 + 2*height*i + height*j, 230 + 3*side_len/2*j)
                 text.setScale(1.1)
                 hextext_line.append(text)
             self.hextexts.append(hextext_line)
@@ -746,12 +871,12 @@ class startWindow(QMainWindow, Ui_StartWindow, QWidget):
         self.quit_button.clicked.connect(self.quit)
 
     def new_game(self):
-        main_window = mainWindow('New', self.get_nickname(), self)
+        main_window = mainWindow('New', self.get_nickname(), None,  self)
         main_window.show()
         self.hide()
 
     def play_ai(self):
-        main_window = mainWindow('Ai', self.get_nickname(), self)
+        main_window = mainWindow('Ai', self.get_nickname(), None, self)
         main_window.show()
         self.hide()
 
@@ -761,7 +886,7 @@ class startWindow(QMainWindow, Ui_StartWindow, QWidget):
         self.hide()
 
     def load(self):
-        main_window = mainWindow('Load', '', self)
+        main_window = mainWindow('Load', '', None, self)
         main_window.show()
         self.hide()
 
@@ -798,25 +923,6 @@ class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
         self.server_button.clicked.connect(self.server)
         self.menu_button.clicked.connect(self.menu)
 
-    def send_agent(self, agent, conn):
-        x = agent.pos_x
-        y = agent.pos_y
-        player = agent.player
-        Message = str(player) + " " + str(x) + " " + str(y)
-        conn.sendall(Message.encode())
-
-    def get_agent(self, conn):
-        data = conn.recv(BUFFER)
-        data = data.decode()
-        message = data.split()
-
-        new_agent = agent()
-        new_agent.player = int(message[0])
-        new_agent.pos_x = int(message[1])
-        new_agent.pos_y = int(message[2])
-        new_agent.value = 2
-        self.agents.append(new_agent)
-
     def client(self):
         self.port = self.port_edit.toPlainText()
         self.address = self.address_edit.toPlainText()
@@ -826,12 +932,14 @@ class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
             data['config'].append({'Address': self.address, 'Port': int(self.port)})
             with open('config.json', 'w') as outfile:
                 json.dump(data, outfile)
-
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.address, int(self.port)))
             data = self.socket.recv(BUFFER)
             data = data.decode()
             print(data)
+            main_window = mainWindow('Client', self.nickname, self.socket, self)
+            main_window.show()
+            self.hide()
         else:
             print('Wrong Address or Port')
 
@@ -854,7 +962,10 @@ class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
                 s.listen(2)
                 self.conn, addr1 = s.accept()
                 print('Connected by', addr1)
-                self.conn.sendall(Connected.encode())
+                self.conn.sendall("Connected".encode())
+                main_window = mainWindow('Server', self.nickname, self.conn, self)
+                main_window.show()
+                self.hide()
         else:
             print('Wrong Address or Port')
 
