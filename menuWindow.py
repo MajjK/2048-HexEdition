@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-
-################################################################################
-## Form generated from reading UI file 'Hex2048_Menu.ui'
-##
-## Created by: Qt User Interface Compiler version 5.15.2
-##
-## WARNING! All changes made in this file will be lost when recompiling UI file!
-################################################################################
-
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
@@ -19,7 +9,7 @@ class Ui_StartWindow(object):
             StartWindow.setObjectName(u"StartWindow")
         StartWindow.resize(251, 307)
         StartWindow.setStyleSheet(u"background-color: rgb(251, 255, 243);\n"
-"border-color: rgb(185, 163, 126);")
+                                  "border-color: rgb(185, 163, 126);")
         self.centralwidget = QWidget(StartWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.new_button = QPushButton(self.centralwidget)
