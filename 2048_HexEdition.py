@@ -1,509 +1,23 @@
-from Hex2048_Menu import Ui_StartWindow
-from Hex2048_Multi import Ui_MultiWindow
-from Hex2048_Scores import Ui_ScoresWindow
-from Hex2048 import Ui_MainWindow
+from menuWindow import Ui_StartWindow
+from multiWindow import Ui_MultiWindow
+from scoresWindow import Ui_ScoresWindow
+from mainWindow import Ui_MainWindow
+from multiMode import multiMode
+from agent import agent
+from game import game
+import thread
 import xml.etree.ElementTree as et
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
-from copy import deepcopy
 import numpy as np
-import traceback
 import os.path
 import socket
-import random
 import json
 import time
 import sys
 import re
-# pyside2-uic Hex2048.ui > Hex2048.py
-
-BUFFER = 100
-
-
-class threadSignals(QObject):
-    finished = Signal()
-    error = Signal(tuple)
-    result = Signal(object)
-    game = Signal(object)
-
-
-class thread(QRunnable):
-    def __init__(self, fn, *args, **kwargs):
-        super(thread, self).__init__()
-        self.fn = fn
-        self.args = args
-        self.kwargs = kwargs
-        self.signals = threadSignals()
-        self.kwargs['game_callback'] = self.signals.game
-
-    @Slot()
-    def run(self):
-        try:
-            result = self.fn(*self.args, **self.kwargs)
-        except:
-            traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit((exctype, value, traceback.format_exc()))
-        else:
-            self.signals.result.emit(result)
-        finally:
-            self.signals.finished.emit()
-
-
-class map:
-    def __init__(self):
-        self.map_area = []
-        for i in range(9):
-            line = []
-            if i < 5:
-                for j in range(5 + i):
-                    line.append(field())
-            else:
-                for j in range(5 + 8 - i):
-                    line.append(field())
-            self.map_area.append(line)
-
-    def update_map(self, agents):
-        # Main function to clear and re-update agents positions and values on the map
-        # It also checks if any agent has 2048 value, if so, game is finished
-        max_value = 0
-        finished = False
-
-        for lines in self.map_area:
-            for element in lines:
-                element.color = ""
-                element.value = ""
-        for elem in agents:
-            self.map_area[elem.pos_y][elem.pos_x].update_field(elem)
-            if elem.value > max_value:
-                max_value = elem.value
-        if max_value >= 2048:
-            finished = True
-        return finished
-
-
-class game:
-    # Main Class connected with current game instance
-    def __init__(self, ai, multi, player):
-        self.agents = []
-        self.map = map()
-        self.finished = False
-        self.turn = 0
-        self.curr_turn = 0
-        self.ai_depth_search = 3
-        self.player = str(player)
-        self.multi = multi
-        self.record = 2
-        self.root = None
-        if self.multi != 'Client':
-            self.init_scoreboards()
-            self.game_history = et.Element('Game')
-            self.game_history.set('AI', str(ai))
-            self.game_history.set('Nickname', self.player)
-            new_agent_1 = agent()
-            new_agent_1.create_agent(0, self.map.map_area)
-            self.agents.append(new_agent_1)
-            self.finished = self.map.update_map(self.agents)
-            new_agent_2 = agent()
-            new_agent_2.create_agent(1, self.map.map_area)
-            self.agents.append(new_agent_2)
-            self.update_turn()
-
-    def init_scoreboards(self):
-        if os.path.exists('scoreboards.xml'):
-            scoreboards_tree = et.parse('scoreboards.xml')
-            self.root = scoreboards_tree.getroot()
-            users = {}
-            for elem in self.root:
-                users[elem.attrib['Nickname']] = int(elem.attrib['Score'])
-            if self.player in users:
-                self.record = users[self.player]
-            else:
-                user = et.SubElement(self.root, "User")
-                user.set('Nickname', self.player)
-                user.set('Score', str(self.record))
-                data = et.tostring(self.root)
-                file = open("scoreboards.xml", "wb")
-                file.write(data)
-        else:
-            self.root = et.Element('Scores')
-            user = et.SubElement(self.root, 'User')
-            user.set('Nickname', self.player)
-            user.set('Score', str(self.record))
-            data = et.tostring(self.root)
-            file = open("scoreboards.xml", "wb")
-            file.write(data)
-
-    def update_scoreboards(self, player_color):
-        for elem_agents in self.agents:
-            if elem_agents.value > self.record and elem_agents.player == player_color:
-                self.record = elem_agents.value
-                for elem_root in self.root:
-                    if elem_root.attrib['Nickname'] == self.player:
-                        elem_root.attrib['Score'] = str(self.record)
-                data = et.tostring(self.root)
-                file = open("scoreboards.xml", "wb")
-                file.write(data)
-
-    def update_history(self):
-        turn = et.SubElement(self.game_history, 'Turn')
-        turn.set('Number', str(self.turn))
-        for elem in self.agents:
-            NewAgent = et.SubElement(turn, 'Agent')
-            NewAgent.set('Player', str(elem.player))
-            NewAgent.set('X', str(elem.pos_x))
-            NewAgent.set('Y', str(elem.pos_y))
-            NewAgent.text = str(elem.value)
-
-    def sort_agents(self, move):
-        if move == 1:
-            self.agents.sort(key=lambda x: x.pos_y)
-        elif move == 2:
-            self.agents.sort(key=lambda x: x.pos_x, reverse=True)
-        elif move == 3:
-            self.agents.sort(key=lambda x: x.pos_y, reverse=True)
-        elif move == 4:
-            self.agents.sort(key=lambda x: x.pos_y, reverse=True)
-        elif move == 5:
-            self.agents.sort(key=lambda x: x.pos_x)
-        elif move == 6:
-            self.agents.sort(key=lambda x: x.pos_y)
-
-    def play_turn(self, move, create_agent=True):
-        self.sort_agents(move)
-        for current_agent in self.agents:
-            if current_agent.player == self.curr_turn:
-                current_agent.move_agent(self.map.map_area, move, self.agents)
-        for current_agent in self.agents:
-            if current_agent.player == self.curr_turn:
-                current_agent.move_agent(self.map.map_area, move, self.agents)
-
-        self.finished = self.map.update_map(self.agents)
-        self.turn += 1
-        if create_agent and len(self.agents) < 61:
-            new_agent = agent()
-            new_agent.create_agent(self.turn % 2, self.map.map_area)
-            self.agents.append(new_agent)
-        self.update_turn()
-
-    def play_turn_ai(self, game_callback):
-        max_val = -100000
-        move_evaluations = []
-        best_evaluations = []
-        time.sleep(1)
-        game_node = gameNode(self, 0)
-        for i in range(0, self.ai_depth_search):
-            game_node.generate_next_level()
-        for i in range(0, 6):
-            if self.curr_turn == 0:
-                move_evaluations.append(-1 * game_node.children[i].evaluate())
-            else:
-                move_evaluations.append(game_node.children[i].evaluate())
-            if move_evaluations[i] > max_val:
-                max_val = move_evaluations[i]
-        for i in range(0, 6):
-            if move_evaluations[i] == max_val:
-                best_evaluations.append(i+1)
-        bestMove = random.choice(best_evaluations)
-        print('best move: ', bestMove, ' (', max_val, ')')
-        self.play_turn(bestMove)
-        game_callback.emit(self)
-
-    def update_turn(self):
-        self.finished = self.map.update_map(self.agents)
-        self.curr_turn = self.turn % 2
-        if self.multi != 'Client':
-            self.update_scoreboards(0)
-            self.update_history()
-
-
-class field:
-    def __init__(self):
-        self.color = ""
-        self.value = ""
-
-    def update_field(self, agent):
-        self.color = str(agent.player)
-        self.value = agent.value
-
-
-class agent:
-    def __init__(self):
-        self.player = -1
-        self.value = 0
-        self.pos_x = -1
-        self.pos_y = -1
-
-    def create_agent(self, player, map):
-        self.player = player
-        self.value = 2
-        clear_field = False
-        while not clear_field:
-            y = random.randrange(9)
-            if y == 0 or y == 8:
-                x = random.randrange(5)
-            elif y == 1 or y == 7:
-                x = random.randrange(6)
-            elif y == 2 or y == 6:
-                x = random.randrange(7)
-            elif y == 3 or y == 5:
-                x = random.randrange(8)
-            else:
-                x = random.randrange(9)
-            if map[y][x].value == "":
-                clear_field = True
-                self.pos_y = y
-                self.pos_x = x
-
-    def move_agent(self, map, direction, agents):
-        while True:
-            if direction == 1:
-                if 0 < self.pos_y < 5:
-                    if self.pos_x < len(map[self.pos_y]) - 1:
-                        if not self.look_for_collision(self.pos_y - 1, self.pos_x, agents):
-                            self.pos_y -= 1
-                        else:
-                            break
-                    else:
-                        break
-                elif 4 < self.pos_y < 9:
-                    if not self.look_for_collision(self.pos_y - 1, self.pos_x + 1, agents):
-                        self.pos_y -= 1
-                        self.pos_x += 1
-                    else:
-                        break
-                else:
-                    break
-
-            elif direction == 2:
-                if self.pos_x < len(map[self.pos_y]) - 1:
-                    if not self.look_for_collision(self.pos_y, self.pos_x + 1, agents):
-                        self.pos_x += 1
-                    else:
-                        break
-                else:
-                    break
-
-            elif direction == 3:
-                if self.pos_y < 4:
-                    if not self.look_for_collision(self.pos_y + 1, self.pos_x + 1, agents):
-                        self.pos_y += 1
-                        self.pos_x += 1
-                    else:
-                        break
-                elif self.pos_y < 8:
-                    if self.pos_x < len(map[self.pos_y]) - 1:
-                        if not self.look_for_collision(self.pos_y + 1, self.pos_x, agents):
-                            self.pos_y += 1
-                        else:
-                            break
-                    else:
-                        break
-                else:
-                    break
-
-            elif direction == 4:
-                if self.pos_y < 4:
-                    if not self.look_for_collision(self.pos_y + 1, self.pos_x, agents):
-                        self.pos_y += 1
-                    else:
-                        break
-                elif self.pos_y < 8:
-                    if self.pos_x > 0:
-                        if not self.look_for_collision(self.pos_y + 1, self.pos_x - 1, agents):
-                            self.pos_y += 1
-                            self.pos_x -= 1
-                        else:
-                            break
-                    else:
-                        break
-                else:
-                    break
-
-            elif direction == 5:
-                if self.pos_x > 0:
-                    if not self.look_for_collision(self.pos_y, self.pos_x - 1, agents):
-                        self.pos_x -= 1
-                    else:
-                        break
-                else:
-                    break
-
-            elif direction == 6:
-                if 0 < self.pos_y < 5:
-                    if self.pos_x > 0:
-                        if not self.look_for_collision(self.pos_y - 1, self.pos_x - 1, agents):
-                            self.pos_y -= 1
-                            self.pos_x -= 1
-                        else:
-                            break
-                    else:
-                        break
-                elif 4 < self.pos_y < 9:
-                    if not self.look_for_collision(self.pos_y - 1, self.pos_x, agents):
-                        self.pos_y -= 1
-                    else:
-                        break
-                else:
-                    break
-
-    def look_for_collision(self, pos_y, pos_x, agents):
-        for elem in agents:
-            if elem.pos_y == pos_y and elem.pos_x == pos_x:
-                if elem.player == self.player and elem.value == self.value:
-                    elem.value += self.value
-                    agents.pop(agents.index(self))
-                return True
-        return False
-
-
-class gameNode:
-    # Class connected with AI game mode
-    def __init__(self, game, level):
-        self.game = game
-        self.level = level
-        self.children = []
-
-    def generate_next_level(self):
-        # Main function to generate game node for AI action evaluation
-        if len(self.children) == 0:
-            if self.level == 0 or self.level == 2:
-                self.generate_next_level_for_player_move()
-            else:
-                self.generate_next_level_for_agents()
-        else:
-            for child in self.children:
-                child.generate_next_level()
-
-    def generate_next_level_for_player_move(self):
-        # It generates node if its a player turn, 6 possible moves
-        for move in range(1, 7):
-            newGame = deepcopy(self.game)
-            newGame.play_turn(move, False)
-            node = gameNode(newGame, (self.level + 1) % 4)
-            self.children.append(node)
-
-    def generate_next_level_for_agents(self):
-        # It generates node if its AI turn, its more complicated because this function
-        # try to guess next new agent position
-        for y in range(0, len(self.game.map.map_area)):
-            for x in range(0, len(self.game.map.map_area[y])):
-                if self.game.map.map_area[y][x].value == '':
-                    new_game = deepcopy(self.game)
-                    new_agent = agent()
-                    new_agent.player = new_game.curr_turn
-                    new_agent.pos_x = x
-                    new_agent.pos_y = y
-                    new_game.agents.append(new_agent)
-                    new_game.finished = new_game.map.update_map(new_game.agents)
-                    node = gameNode(new_game, (self.level + 1) % 4)
-                    self.children.append(node)
-
-    def evaluate(self):
-        # The most important function in AI mode, it evaluates profitability of specific move and its consequences
-        if len(self.children) == 0:
-            result = 0
-            if self.game.finished:
-                return 1000
-            for elem in self.game.agents:
-                if elem.player == 1:
-                    result = result - 1
-                else:
-                    result = result + 1
-            return result
-
-        elif self.level == 0:
-            max_val = -1000000
-            for child in self.children:
-                child_evaluation = child.evaluate()
-                if child_evaluation > max_val:
-                    max_val = child_evaluation
-            return max_val
-
-        elif self.level == 1 or self.level == 3:
-            sum_val = 0
-            for child in self.children:
-                child_evaluation = child.evaluate()
-                sum_val = sum_val + child_evaluation
-            return sum_val / len(self.children)
-
-        else:
-            min_val = 1000000
-            for child in self.children:
-                child_evaluation = child.evaluate()
-                if child_evaluation < min_val:
-                    min_val = child_evaluation
-            return min_val
-
-
-class multiMode:
-    def __init__(self, multi, socket):
-        self.mode = multi
-        self.socket = socket
-
-    def send_exit(self):
-        message = str(7)
-        self.socket.sendall(message.encode())
-
-    def send_move_and_agent(self, move, agent):
-        message = str(move) + " " + str(agent.player) + " " + str(agent.pos_x) + " " + \
-                  str(agent.pos_y) + " " + str(agent.value)
-        self.socket.sendall(message.encode())
-
-    def get_move_and_agent(self, game, window, parent_window):
-        data = self.socket.recv(BUFFER)
-        data = data.decode()
-        message = data.split()
-        move = int(message[0])
-        if move == 7:
-            print('Your opponent closed connection !')
-            window.close()
-            parent_window.show()
-        else:
-            game.play_turn(int(message[0]), create_agent=False)
-            new_agent = agent()
-            new_agent.player = int(message[1])
-            new_agent.pos_x = int(message[2])
-            new_agent.pos_y = int(message[3])
-            new_agent.value = int(message[4])
-            game.agents.append(new_agent)
-            return game
-
-    def send_agent(self, agent):
-        message_agent = str(agent.player) + " " + str(agent.pos_x) + " " + str(agent.pos_y) + " " + str(agent.value)
-        self.socket.sendall(message_agent.encode())
-
-    def get_agent(self):
-        data = self.socket.recv(BUFFER)
-        data = data.decode()
-        message = data.split()
-        new_agent = agent()
-        new_agent.player = int(message[0])
-        new_agent.pos_x = int(message[1])
-        new_agent.pos_y = int(message[2])
-        new_agent.value = int(message[3])
-        return new_agent
-
-    def nickname_transmission(self, nickname):
-        if self.mode == 'Server':
-            message_nickname = str(nickname)
-            self.socket.sendall(message_nickname.encode())
-            data = self.socket.recv(BUFFER)
-            data = data.decode()
-            player_2 = data
-            if player_2 == 'User':
-                player_2 = 'Opponent'
-            return player_2
-        elif self.mode == 'Client':
-            data = self.socket.recv(BUFFER)
-            data = data.decode()
-            player = data
-            if player == 'User':
-                player = 'Opponent'
-            message_nickname = str(nickname)
-            self.socket.sendall(message_nickname.encode())
-            return player
+# pyside2-uic Hex2048.ui > mainWindow.py
 
 
 class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
@@ -567,7 +81,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             self.game.agents.append(self.multi.get_agent())
             self.game.agents.append(self.multi.get_agent())
             self.update_hex_map(self.game.agents, self.game.curr_turn, self.game.finished)
-            worker = thread(self.get_move_and_agent_thread)
+            worker = thread.thread(self.get_move_and_agent_thread)
             worker.signals.game.connect(self.update_map_thread_finished)
             self.threadpool.start(worker)
         elif init == 'Server':
@@ -589,7 +103,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
 
     def load_function(self):
         if os.path.exists('game_history.xml'):
-            worker = thread(self.replay)
+            worker = thread.thread(self.replay)
             worker.signals.game.connect(self.update_map_thread)
             self.threadpool.start(worker)
             print("Game Loaded Successfully")
@@ -611,7 +125,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 self.ai_init()
             if self.multi is not None:
                 self.multi.send_move_and_agent(1, self.game.agents[len(self.game.agents)-1])
-                worker = thread(self.get_move_and_agent_thread)
+                worker = thread.thread(self.get_move_and_agent_thread)
                 worker.signals.game.connect(self.update_map_thread_finished)
                 self.threadpool.start(worker)
         else:
@@ -625,7 +139,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 self.ai_init()
             if self.multi is not None:
                 self.multi.send_move_and_agent(2, self.game.agents[len(self.game.agents)-1])
-                worker = thread(self.get_move_and_agent_thread)
+                worker = thread.thread(self.get_move_and_agent_thread)
                 worker.signals.game.connect(self.update_map_thread_finished)
                 self.threadpool.start(worker)
         else:
@@ -639,7 +153,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 self.ai_init()
             if self.multi is not None:
                 self.multi.send_move_and_agent(3, self.game.agents[len(self.game.agents)-1])
-                worker = thread(self.get_move_and_agent_thread)
+                worker = thread.thread(self.get_move_and_agent_thread)
                 worker.signals.game.connect(self.update_map_thread_finished)
                 self.threadpool.start(worker)
         else:
@@ -653,7 +167,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 self.ai_init()
             if self.multi is not None:
                 self.multi.send_move_and_agent(4, self.game.agents[len(self.game.agents)-1])
-                worker = thread(self.get_move_and_agent_thread)
+                worker = thread.thread(self.get_move_and_agent_thread)
                 worker.signals.game.connect(self.update_map_thread_finished)
                 self.threadpool.start(worker)
         else:
@@ -667,7 +181,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 self.ai_init()
             if self.multi is not None:
                 self.multi.send_move_and_agent(5, self.game.agents[len(self.game.agents)-1])
-                worker = thread(self.get_move_and_agent_thread)
+                worker = thread.thread(self.get_move_and_agent_thread)
                 worker.signals.game.connect(self.update_map_thread_finished)
                 self.threadpool.start(worker)
         else:
@@ -681,7 +195,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 self.ai_init()
             if self.multi is not None:
                 self.multi.send_move_and_agent(6, self.game.agents[len(self.game.agents)-1])
-                worker = thread(self.get_move_and_agent_thread)
+                worker = thread.thread(self.get_move_and_agent_thread)
                 worker.signals.game.connect(self.update_map_thread_finished)
                 self.threadpool.start(worker)
         else:
@@ -708,7 +222,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
 
     def ai_init(self):
         self.in_progress = True
-        worker = thread(self.game.play_turn_ai)
+        worker = thread.thread(self.game.play_turn_ai)
         worker.signals.game.connect(self.update_map_thread_finished)
         self.threadpool.start(worker)
 
@@ -718,7 +232,8 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         game_callback.emit(self.game)
 
     def update_map_thread_finished(self, game):
-        self.update_hex_map(game.agents, game.curr_turn, game.finished)
+        if game is not None:
+            self.update_hex_map(game.agents, game.curr_turn, game.finished)
         self.in_progress = False
 
     def update_map_thread(self, game):
@@ -908,6 +423,7 @@ class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
     def __init__(self, nickname, parent=None):
         self.parent = parent
         self.nickname = nickname
+        self.buffer = 100
         self.port = 0
         self.address = ''
         self.conn = None
@@ -934,7 +450,7 @@ class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
                 json.dump(data, outfile)
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.address, int(self.port)))
-            data = self.socket.recv(BUFFER)
+            data = self.socket.recv(self.buffer)
             data = data.decode()
             print(data)
             main_window = mainWindow('Client', self.nickname, self.socket, self)
