@@ -11,6 +11,9 @@ The game offers singleplayer mode(versus AI based on min-max algorithm), hot-sea
 <img src="./img/in_game.png">
 </p>
 <p align="center"> 
+<img src="./img/multi_menu.png">
+</p>
+<p align="center"> 
 <img src="./img/in_game_2.png">
 </p>
 
