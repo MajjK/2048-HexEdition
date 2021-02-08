@@ -4,16 +4,19 @@ The project is a hexagonal version of popular "2048" game. It's an expanded cont
 The game offers singleplayer mode(versus AI based on min-max algorithm), hot-seat mode for two players and multiplayer mode which offers possibility to play by LAN.
 
 ## Screenshots
-Main Menu
+Main Menu:
 <p align="center"> 
 <img src="./img/menu.png">
 </p>
+In-game screenshot:
 <p align="center"> 
 <img src="./img/in_game.png">
 </p>
+Multiplayer Menu:
 <p align="center"> 
 <img src="./img/multi_menu.png">
 </p>
+In-game screenshot:
 <p align="center"> 
 <img src="./img/in_game_2.png">
 </p>
