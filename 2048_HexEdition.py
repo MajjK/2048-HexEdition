@@ -276,12 +276,12 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             polygons_line = []
             for i in range(5+j):
                 polygon = QPolygonF()
-                polygon.append(QPointF(0 + 2*i*height - j*height, -1*side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(2*i*height - j*height, -1*side_len/2 + 3*side_len/2*j))
                 polygon.append(QPointF(height + 2*i*height - j*height, -1*side_len + 3*side_len/2*j))
                 polygon.append(QPointF(2*height + 2*i*height - j*height, -1*side_len/2 + 3*side_len/2*j))
                 polygon.append(QPointF(2*height + 2*i*height - j*height, side_len/2 + 3*side_len/2*j))
                 polygon.append(QPointF(height + 2*i*height - j*height, side_len + 3*side_len/2*j))
-                polygon.append(QPointF(0 + 2*i*height - j*height, side_len/2 + 3*side_len/2*j))
+                polygon.append(QPointF(2*i*height - j*height, side_len/2 + 3*side_len/2*j))
                 polygons_line.append(self.scene.addPolygon(polygon, self.pen))
             self.hexpolygons.append(polygons_line)
         for j in range(4):
@@ -351,7 +351,6 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
 
 class scoresWindow(QMainWindow, Ui_ScoresWindow, QWidget):
     def __init__(self, parent=None):
-        self.parent = parent
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
         self.setWindowTitle("2048 - HexEdition - Multiplayer")
@@ -440,14 +439,7 @@ class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
         self.menu_button.clicked.connect(self.menu)
 
     def client(self):
-        self.port = self.port_edit.toPlainText()
-        self.address = self.address_edit.toPlainText()
-        if re.search('[a-zA-Z]', self.address) is None and re.search('[a-zA-Z]', self.port) is None\
-           and self.address != '' and self.port != '':
-            data = {'config': []}
-            data['config'].append({'Address': self.address, 'Port': int(self.port)})
-            with open('config.json', 'w') as outfile:
-                json.dump(data, outfile)
+        if self.save_data():
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.address, int(self.port)))
             data = self.socket.recv(self.buffer)
@@ -456,19 +448,9 @@ class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
             main_window = mainWindow('Client', self.nickname, self.socket, self)
             main_window.show()
             self.hide()
-        else:
-            print('Wrong Address or Port')
 
     def server(self):
-        self.port = self.port_edit.toPlainText()
-        self.address = self.address_edit.toPlainText()
-        if re.search('[a-zA-Z]', self.address) is None and re.search('[a-zA-Z]', self.port) is None \
-           and self.address != '' and self.port != '':
-            data = {'config': []}
-            data['config'].append({'Address': self.address, 'Port': int(self.port)})
-            with open('config.json', 'w') as outfile:
-                json.dump(data, outfile)
-
+        if self.save_data():
             print('Server started. Waiting for clients...')
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 try:
@@ -482,12 +464,24 @@ class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
                 main_window = mainWindow('Server', self.nickname, self.conn, self)
                 main_window.show()
                 self.hide()
-        else:
-            print('Wrong Address or Port')
 
     def menu(self):
         self.close()
         self.parent.show()
+
+    def save_data(self):
+        self.port = self.port_edit.toPlainText()
+        self.address = self.address_edit.toPlainText()
+        if re.search('[a-zA-Z]', self.address) is None and re.search('[a-zA-Z]', self.port) is None \
+                and self.address != '' and self.port != '':
+            data = {'config': []}
+            data['config'].append({'Address': self.address, 'Port': int(self.port)})
+            with open('config.json', 'w') as outfile:
+                json.dump(data, outfile)
+            return True
+        else:
+            print('Wrong Address or Port')
+            return False
 
     def load_data(self):
         if os.path.exists('config.json'):
