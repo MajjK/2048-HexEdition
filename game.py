@@ -50,13 +50,16 @@ class game:
                 file = open("scoreboards.xml", "wb")
                 file.write(data)
         else:
-            self.root = et.Element('Scores')
-            user = et.SubElement(self.root, 'User')
-            user.set('Nickname', self.player)
-            user.set('Score', str(self.record))
-            data = et.tostring(self.root)
-            file = open("scoreboards.xml", "wb")
-            file.write(data)
+            self.create_scoreboards()
+
+    def create_scoreboards(self):
+        self.root = et.Element('Scores')
+        user = et.SubElement(self.root, 'User')
+        user.set('Nickname', self.player)
+        user.set('Score', str(self.record))
+        data = et.tostring(self.root)
+        file = open("scoreboards.xml", "wb")
+        file.write(data)
 
     def update_scoreboards(self, player_color):
         for elem_agents in self.agents:
@@ -97,11 +100,10 @@ class game:
         self.sort_agents(move)
         for current_agent in self.agents:
             if current_agent.player == self.curr_turn:
-                current_agent.move_agent(self.map.map_area, move, self.agents)
+                current_agent.move_agent(self, move)
         for current_agent in self.agents:
             if current_agent.player == self.curr_turn:
-                current_agent.move_agent(self.map.map_area, move, self.agents)
-
+                current_agent.move_agent(self, move)
         self.finished = self.map.update_map(self.agents)
         self.turn += 1
         if create_agent and len(self.agents) < 61:

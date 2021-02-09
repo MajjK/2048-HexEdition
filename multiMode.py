@@ -1,12 +1,12 @@
 from agent import agent
-import socket
 
 
 class multiMode:
-    def __init__(self, multi, socket):
+    def __init__(self, multi, parent):
         self.BUFFER = 100
         self.mode = multi
-        self.socket = socket
+        self.parent = parent
+        self.socket = self.parent.socket
 
     def send_exit(self):
         message = str(7)
@@ -17,25 +17,24 @@ class multiMode:
                   str(agent.pos_y) + " " + str(agent.value)
         self.socket.sendall(message.encode())
 
-    def get_move_and_agent(self, game, window, parent_window):
+    def get_move_and_agent(self, game_callback):
         data = self.socket.recv(self.BUFFER)
         data = data.decode()
         message = data.split()
         move = int(message[0])
         if move == 7:
             print('Your opponent closed connection !')
-            window.close()
-            parent_window.show()
-            return None
+            self.parent.close()
+            self.parent.parent.show()
         else:
-            game.play_turn(int(message[0]), create_agent=False)
+            self.parent.game.play_turn(int(message[0]), create_agent=False)
             new_agent = agent()
             new_agent.player = int(message[1])
             new_agent.pos_x = int(message[2])
             new_agent.pos_y = int(message[3])
             new_agent.value = int(message[4])
-            game.agents.append(new_agent)
-            return game
+            self.parent.game.agents.append(new_agent)
+        game_callback.emit(self.parent.game)
 
     def send_agent(self, agent):
         message_agent = str(agent.player) + " " + str(agent.pos_x) + " " + str(agent.pos_y) + " " + str(agent.value)
@@ -52,22 +51,24 @@ class multiMode:
         new_agent.value = int(message[3])
         return new_agent
 
+    def send_nickname(self, nickname):
+        message_nickname = str(nickname)
+        self.socket.sendall(message_nickname.encode())
+
+    def get_nickname(self):
+        data = self.socket.recv(self.BUFFER)
+        data = data.decode()
+        nickname = data
+        if nickname == 'User':
+            nickname = 'Opponent'
+        return nickname
+
     def nickname_transmission(self, nickname):
         if self.mode == 'Server':
-            message_nickname = str(nickname)
-            self.socket.sendall(message_nickname.encode())
-            data = self.socket.recv(self.BUFFER)
-            data = data.decode()
-            player_2 = data
-            if player_2 == 'User':
-                player_2 = 'Opponent'
+            self.send_nickname(nickname)
+            player_2 = self.get_nickname()
             return player_2
         elif self.mode == 'Client':
-            data = self.socket.recv(self.BUFFER)
-            data = data.decode()
-            player = data
-            if player == 'User':
-                player = 'Opponent'
-            message_nickname = str(nickname)
-            self.socket.sendall(message_nickname.encode())
+            player = self.get_nickname()
+            self.send_nickname(nickname)
             return player
