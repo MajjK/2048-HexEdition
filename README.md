@@ -1,7 +1,7 @@
 # 2048-HexEdition
 ## General Info
 The project is a hexagonal version of popular "2048" game. It's an expanded continuation of my university project. 
-The game offers singleplayer mode(versus AI based on min-max algorithm), hot-seat mode for two players and multiplayer mode which offers possibility to play by LAN.
+The game offers singleplayer mode(versus AI based on min-max algorithm), hot-seat mode for two players and multiplayer mode which offers possibility to create server/client game instances.
 
 ## Screenshots
 <div align="center"> Main Menu: </div>
@@ -24,10 +24,10 @@ The game offers singleplayer mode(versus AI based on min-max algorithm), hot-sea
 ## Technologies used
 * Python 3.6 - Main language.
 * PySide2 - Python module which provides access to the complete Qt 5.12+ framework. Used for GUI design and threading.
-* socket - Python module for networking interface.
+* Socket - Python module for networking interface.
 
 ## Features
-* Singleplayer versus AI
+* Singleplayer versus AI(adjusted min-max algorithm)
 * Multiplayer mode - Possibility of saving port/address configuration to a .json file
 * Hot-seat mode
 * Scoreboards
