@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+
+################################################################################
+## Form generated from reading UI file 'Hex2048_Multi.ui'
+##
+## Created by: Qt User Interface Compiler version 5.15.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
+
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
@@ -7,9 +17,15 @@ class Ui_MultiWindow(object):
     def setupUi(self, MultiWindow):
         if not MultiWindow.objectName():
             MultiWindow.setObjectName(u"MultiWindow")
-        MultiWindow.resize(287, 145)
+        MultiWindow.resize(301, 141)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(MultiWindow.sizePolicy().hasHeightForWidth())
+        MultiWindow.setSizePolicy(sizePolicy)
+        MultiWindow.setMaximumSize(QSize(301, 141))
         MultiWindow.setStyleSheet(u"background-color: rgb(251, 255, 243);\n"
-                                  "border-color: rgb(185, 163, 126);")
+"border-color: rgb(185, 163, 126);")
         self.centralwidget = QWidget(MultiWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.server_button = QPushButton(self.centralwidget)
@@ -24,7 +40,7 @@ class Ui_MultiWindow(object):
         self.server_button.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.port_edit = QTextEdit(self.centralwidget)
         self.port_edit.setObjectName(u"port_edit")
-        self.port_edit.setGeometry(QRect(20, 10, 111, 31))
+        self.port_edit.setGeometry(QRect(20, 10, 131, 35))
         font1 = QFont()
         font1.setFamily(u"Arial")
         font1.setPointSize(12)
@@ -34,7 +50,7 @@ class Ui_MultiWindow(object):
         self.port_edit.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.address_edit = QTextEdit(self.centralwidget)
         self.address_edit.setObjectName(u"address_edit")
-        self.address_edit.setGeometry(QRect(20, 50, 111, 31))
+        self.address_edit.setGeometry(QRect(20, 50, 131, 35))
         self.address_edit.setFont(font1)
         self.address_edit.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.connect_button = QPushButton(self.centralwidget)

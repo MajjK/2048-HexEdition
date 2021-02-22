@@ -98,6 +98,11 @@ class game:
 
     def play_turn(self, move, create_agent=True):
         self.sort_agents(move)
+        #new_map = None
+        #while self.map != new_map:
+        #    for current_agent in self.agents:
+        #        if current_agent.player == self.curr_turn:
+        #            current_agent.move_agent(self, move)
         for current_agent in self.agents:
             if current_agent.player == self.curr_turn:
                 current_agent.move_agent(self, move)

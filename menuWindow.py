@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+
+################################################################################
+## Form generated from reading UI file 'Hex2048_Menu.ui'
+##
+## Created by: Qt User Interface Compiler version 5.15.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
+
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
@@ -7,9 +17,15 @@ class Ui_StartWindow(object):
     def setupUi(self, StartWindow):
         if not StartWindow.objectName():
             StartWindow.setObjectName(u"StartWindow")
-        StartWindow.resize(251, 307)
+        StartWindow.resize(251, 303)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(StartWindow.sizePolicy().hasHeightForWidth())
+        StartWindow.setSizePolicy(sizePolicy)
+        StartWindow.setMaximumSize(QSize(251, 303))
         StartWindow.setStyleSheet(u"background-color: rgb(251, 255, 243);\n"
-                                  "border-color: rgb(185, 163, 126);")
+"border-color: rgb(185, 163, 126);")
         self.centralwidget = QWidget(StartWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.new_button = QPushButton(self.centralwidget)
@@ -44,7 +60,7 @@ class Ui_StartWindow(object):
         self.quit_button.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.nick_edit = QTextEdit(self.centralwidget)
         self.nick_edit.setObjectName(u"nick_edit")
-        self.nick_edit.setGeometry(QRect(110, 10, 111, 31))
+        self.nick_edit.setGeometry(QRect(110, 8, 131, 35))
         font1 = QFont()
         font1.setFamily(u"Arial")
         font1.setPointSize(12)
@@ -54,7 +70,7 @@ class Ui_StartWindow(object):
         self.nick_edit.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.label_text_nickname = QLabel(self.centralwidget)
         self.label_text_nickname.setObjectName(u"label_text_nickname")
-        self.label_text_nickname.setGeometry(QRect(20, 10, 81, 31))
+        self.label_text_nickname.setGeometry(QRect(10, 8, 91, 31))
         self.label_text_nickname.setFont(font1)
         self.label_text_nickname.setAlignment(Qt.AlignCenter)
         self.multi_button = QPushButton(self.centralwidget)
@@ -80,7 +96,7 @@ class Ui_StartWindow(object):
         self.scores_button.setText(QCoreApplication.translate("StartWindow", u"Scores", None))
         self.quit_button.setText(QCoreApplication.translate("StartWindow", u"Quit", None))
         self.nick_edit.setPlaceholderText(QCoreApplication.translate("StartWindow", u"User", None))
-        self.label_text_nickname.setText(QCoreApplication.translate("StartWindow", u"Nickname", None))
+        self.label_text_nickname.setText(QCoreApplication.translate("StartWindow", u"Nickname :", None))
         self.multi_button.setText(QCoreApplication.translate("StartWindow", u"Multiplayer", None))
     # retranslateUi
 

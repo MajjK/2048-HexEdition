@@ -39,11 +39,6 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         self.setWindowTitle("2048 - HexEdition")
         self.scene = QGraphicsScene(self)
         self.graphics_view.setScene(self.scene)
-        self.white_brush = QBrush(Qt.white)
-        self.red_brush = QBrush(Qt.red)
-        self.blue_brush = QBrush(Qt.blue)
-        self.pen = QPen(Qt.black)
-        self.pen.setWidth(2)
         self.create_hex_map()
         self.show()
 
@@ -186,7 +181,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             pass
 
     def save_game_function(self):
-        if self.multi.mode == 'Client':
+        if self.multi != None and self.multi.mode == 'Client':
             print("You can't save game in Client Mode!")
             pass
         elif self.in_game and not self.in_progress:
@@ -275,7 +270,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 polygon.append(QPointF(2*height + 2*i*height - j*height, side_len/2 + 3*side_len/2*j))
                 polygon.append(QPointF(height + 2*i*height - j*height, side_len + 3*side_len/2*j))
                 polygon.append(QPointF(2*i*height - j*height, side_len/2 + 3*side_len/2*j))
-                polygons_line.append(self.scene.addPolygon(polygon, self.pen))
+                polygons_line.append(self.scene.addPolygon(polygon, QPen(Qt.black, 2)))
             polygons.append(polygons_line)
         for j in range(4):
             polygons_line = []
@@ -287,7 +282,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 polygon.append(QPointF(-1*height + 2*i*height + j*height, 16*side_len/2 + 3*side_len/2*j))
                 polygon.append(QPointF(-2*height + 2*i*height + j*height, 17*side_len/2 + 3*side_len/2*j))
                 polygon.append(QPointF(-3*height + 2*i*height + j*height, 16*side_len/2 + 3*side_len/2*j))
-                polygons_line.append(self.scene.addPolygon(polygon, self.pen))
+                polygons_line.append(self.scene.addPolygon(polygon, QPen(Qt.black, 2)))
             polygons.append(polygons_line)
         return polygons
 
@@ -320,18 +315,8 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         self.hextexts = self.create_text_edits(side_len, height)
 
     def update_hex_map(self):
-        if self.game.curr_turn % 2 == 0:
-            self.label_player.setText(self.player)
-            self.label_color.setText('Red')
-        else:
-            self.label_player.setText(self.player_2)
-            self.label_color.setText('Blue')
-        for lines in self.hexpolygons:
-            for element in lines:
-                element.setBrush(self.white_brush)
-        for lines in self.hextexts:
-            for element in lines:
-                element.setText("")
+        self.set_player_labels()
+        self.clear_map()
         for elem in self.game.agents:
             str_val = str(elem.value)
             if len(str_val) == 1:
@@ -341,18 +326,49 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             elif len(str_val) == 3:
                 str_val = " " + str_val
             self.hextexts[elem.pos_y][elem.pos_x].setText(str_val)
-            if elem.player == 0:
-                self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(self.red_brush)
-            else:
-                self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(self.blue_brush)
+            self.set_polygon_brush(elem)
         self.check_finished()
+
+    def set_player_labels(self):
+        if self.game.curr_turn % 2 == 0:
+            self.label_player.setText(self.player)
+            self.label_color.setText('Red')
+        else:
+            self.label_player.setText(self.player_2)
+            self.label_color.setText('Blue')
+
+    def clear_map(self):
+        for lines in self.hexpolygons:
+            for element in lines:
+                element.setBrush(QBrush(Qt.white))
+        for lines in self.hextexts:
+            for element in lines:
+                element.setText("")
+
+    def set_polygon_brush(self, elem):
+        red_brushes = { 2 : QBrush(QColor(255, 223, 212)), 4 : QBrush(QColor(255, 191, 170)),
+                        8 : QBrush(QColor(255, 158, 129)), 16 : QBrush(QColor(255, 123, 90)),
+                        32 : QBrush(QColor(255, 82, 50)), 64 : QBrush(QColor(255, 0, 0)),
+                        128 : QBrush(QColor(209, 21, 7)), 256 : QBrush(QColor(165, 27, 11)),
+                        512 : QBrush(QColor(122, 27, 12)), 1024 : QBrush(QColor(98, 22, 10)),
+                        2048 : QBrush(QColor(82, 23, 11)) }
+        blue_brushes = { 2 : QBrush(QColor(135, 206, 235)), 4 : QBrush(QColor(135, 206, 250)),
+                         8 : QBrush(QColor(0, 191, 255)), 16 : QBrush(QColor(100, 149, 237)),
+                         32 : QBrush(QColor(30, 144, 255)), 64 : QBrush(QColor(65, 105, 225)),
+                         128 : QBrush(QColor(0, 0, 255)), 256 : QBrush(QColor(0, 0, 225)),
+                         512 : QBrush(QColor(0, 0, 195)), 1024 : QBrush(QColor(0, 0, 165)),
+                         2048 : QBrush(QColor(0, 0, 135)) }
+        if elem.player == 0:
+            self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(red_brushes[elem.value])
+        else:
+            self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(blue_brushes[elem.value])
 
 
 class scoresWindow(QMainWindow, Ui_ScoresWindow, QWidget):
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
-        self.setWindowTitle("2048 - HexEdition - Multiplayer")
+        self.setWindowTitle("2048 - Scores")
         self.show()
         if os.path.exists('scoreboards.xml'):
             scoreboards_tree = et.parse('scoreboards.xml')
@@ -373,7 +389,7 @@ class startWindow(QMainWindow, Ui_StartWindow, QWidget):
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
-        self.setWindowTitle("2048 - HexEdition - Menu")
+        self.setWindowTitle("2048 - Menu")
         self.show()
 
         self.new_button.clicked.connect(self.new_game)
@@ -426,7 +442,7 @@ class multiWindow(QMainWindow, Ui_MultiWindow, QWidget):
 
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
-        self.setWindowTitle("2048 - HexEdition - Multiplayer")
+        self.setWindowTitle("2048 - Multiplayer")
         self.show()
         self.load_data()
 

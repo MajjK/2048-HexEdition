@@ -18,6 +18,12 @@ class Ui_ScoresWindow(object):
         if not ScoresWindow.objectName():
             ScoresWindow.setObjectName(u"ScoresWindow")
         ScoresWindow.resize(270, 382)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(ScoresWindow.sizePolicy().hasHeightForWidth())
+        ScoresWindow.setSizePolicy(sizePolicy)
+        ScoresWindow.setMaximumSize(QSize(270, 382))
         ScoresWindow.setStyleSheet(u"background-color: rgb(251, 255, 243);\n"
 "border-color: rgb(185, 163, 126);")
         self.centralwidget = QWidget(ScoresWindow)

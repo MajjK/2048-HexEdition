@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+
+################################################################################
+## Form generated from reading UI file 'Hex2048.ui'
+##
+## Created by: Qt User Interface Compiler version 5.15.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
+
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
@@ -7,10 +17,16 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(560, 778)
+        MainWindow.resize(560, 773)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
+        MainWindow.setSizePolicy(sizePolicy)
+        MainWindow.setMaximumSize(QSize(560, 773))
         MainWindow.setLayoutDirection(Qt.LeftToRight)
         MainWindow.setStyleSheet(u"background-color: rgb(251, 255, 243);\n"
-                                 "border-color: rgb(185, 163, 126);")
+"border-color: rgb(185, 163, 126);")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.ControlButtons = QGroupBox(self.centralwidget)
@@ -73,7 +89,7 @@ class Ui_MainWindow(object):
         self.graphics_view.setLineWidth(1)
         self.label_player = QLabel(self.centralwidget)
         self.label_player.setObjectName(u"label_player")
-        self.label_player.setGeometry(QRect(480, 0, 71, 31))
+        self.label_player.setGeometry(QRect(475, 0, 81, 31))
         font2 = QFont()
         font2.setFamily(u"Arial")
         font2.setPointSize(12)
@@ -83,7 +99,7 @@ class Ui_MainWindow(object):
         self.label_player.setFont(font2)
         self.label_text_player = QLabel(self.centralwidget)
         self.label_text_player.setObjectName(u"label_text_player")
-        self.label_text_player.setGeometry(QRect(420, 0, 61, 31))
+        self.label_text_player.setGeometry(QRect(415, 0, 61, 31))
         self.label_text_player.setFont(font1)
         self.label_text_player.setAlignment(Qt.AlignCenter)
         self.save_game_button = QPushButton(self.centralwidget)
@@ -98,7 +114,7 @@ class Ui_MainWindow(object):
         self.menu_button.setStyleSheet(u"background-color: rgb(197, 173, 134)")
         self.label_color = QLabel(self.centralwidget)
         self.label_color.setObjectName(u"label_color")
-        self.label_color.setGeometry(QRect(375, 0, 41, 31))
+        self.label_color.setGeometry(QRect(370, 0, 41, 31))
         self.label_color.setFont(font1)
         self.label_color.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
         MainWindow.setCentralWidget(self.centralwidget)
@@ -125,8 +141,8 @@ class Ui_MainWindow(object):
         self.tr_button.setText(QCoreApplication.translate("MainWindow", u"Top - Right", None))
         self.l_button.setText(QCoreApplication.translate("MainWindow", u"Left", None))
         self.r_button.setText(QCoreApplication.translate("MainWindow", u"Right", None))
-        self.bl_button.setText(QCoreApplication.translate("MainWindow", u"Bottom - left", None))
-        self.br_button.setText(QCoreApplication.translate("MainWindow", u"Botton - Right", None))
+        self.bl_button.setText(QCoreApplication.translate("MainWindow", u"Bottom - Left", None))
+        self.br_button.setText(QCoreApplication.translate("MainWindow", u"Bottom - Right", None))
         self.control_text.setText(QCoreApplication.translate("MainWindow", u"Controls", None))
         self.label_player.setText("")
         self.label_text_player.setText(QCoreApplication.translate("MainWindow", u"Player :", None))
