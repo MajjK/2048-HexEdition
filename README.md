@@ -27,14 +27,12 @@ The game offers singleplayer mode(versus AI based on min-max algorithm), hot-sea
 * Socket - Python module for networking interface.
 
 ## Features
-* Singleplayer versus AI(adjusted min-max algorithm)
-* Multiplayer mode - Possibility of saving port/address configuration to a .json file
+* Singleplayer mode versus AI(adjusted min-max algorithm)
+* Multiplayer mode - Possibility of saving port/address configuration into a .json file
 * Hot-seat mode
+* Motion animations - done with multithreading
 * Scoreboards
 * Saving/Loading game instance to/from .xml file - live replay
-
-To do:
-* Movement animation
 
 ## Setup
 Clone the repo, then install all required dependiences (You can do it by pip). Then just start "2048-HexEdition.py" 
