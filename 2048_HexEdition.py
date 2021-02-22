@@ -27,11 +27,11 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         self.socket = connection
         self.game = None
         self.multi = None
-        self.in_game = False
         self.ai = False
         self.in_progress = False
         self.hexpolygons = []
         self.hextexts = []
+        self.move = 0
 
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
@@ -42,15 +42,14 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         self.create_hex_map()
         self.show()
 
-        self.label_player.setText(self.player)
+        self.save_game_button.clicked.connect(self.save_game_function)
+        self.menu_button.clicked.connect(self.menu_function)
         self.tr_button.clicked.connect(self.tr_function)
         self.r_button.clicked.connect(self.r_function)
         self.br_button.clicked.connect(self.br_function)
         self.bl_button.clicked.connect(self.bl_function)
         self.l_button.clicked.connect(self.l_function)
         self.tl_button.clicked.connect(self.tl_function)
-        self.save_game_button.clicked.connect(self.save_game_function)
-        self.menu_button.clicked.connect(self.menu_function)
         self.tr_keyboard = QShortcut(QKeySequence(Qt.Key_Up, Qt.Key_Right), self.tr_button, self.tr_function)
         self.r_keyboard = QShortcut(QKeySequence(Qt.Key_Right), self.r_button, self.r_function)
         self.br_keyboard = QShortcut(QKeySequence(Qt.Key_Down, Qt.Key_Right), self.br_button, self.br_function)
@@ -78,13 +77,12 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             self.server_function()
 
     def new_game_function(self):
-        self.in_game = True
         self.game = game(0, self.multi, self.player)
         self.update_hex_map()
 
     def load_function(self):
         if os.path.exists('game_history.xml'):
-            self.create_worker(self.replay, self.update_hex_map)
+            self.create_worker(self.replay)
             print("Game Loaded Successfully")
         else:
             print("Cant find game_history.xml")
@@ -92,134 +90,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             self.close()
             self.parent.show()
 
-    def play_ai_function(self):
-        self.in_game = True
-        self.ai = True
-        self.game = game(1, self.multi, self.player)
-        self.update_hex_map()
-
-    def client_function(self):
-        self.in_game = True
-        self.game = game(0, self.multi.mode, self.player)
-        self.game.agents.append(self.multi.get_agent())
-        self.game.agents.append(self.multi.get_agent())
-        self.update_hex_map()
-        self.create_worker(self.multi.get_move_and_agent, self.update_map_thread_finished)
-
-    def server_function(self):
-        self.in_game = True
-        self.game = game(0, self.multi.mode, self.player)
-        self.multi.send_agent(self.game.agents[0])
-        time.sleep(0.5)
-        self.multi.send_agent(self.game.agents[1])
-        self.update_hex_map()
-
-    def tr_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(1)
-            self.update_hex_map()
-            if self.ai and not self.game.finished:
-                self.start_ai_turn()
-            if self.multi is not None:
-                self.start_multi_turn(1)
-        else:
-            pass
-
-    def r_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(2)
-            self.update_hex_map()
-            if self.ai and not self.game.finished:
-                self.start_ai_turn()
-            elif self.multi is not None:
-                self.start_multi_turn(2)
-        else:
-            pass
-
-    def br_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(3)
-            self.update_hex_map()
-            if self.ai and not self.game.finished:
-                self.start_ai_turn()
-            elif self.multi is not None:
-                self.start_multi_turn(3)
-        else:
-            pass
-
-    def bl_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(4)
-            self.update_hex_map()
-            if self.ai and not self.game.finished:
-                self.start_ai_turn()
-            elif self.multi is not None:
-                self.start_multi_turn(4)
-        else:
-            pass
-
-    def l_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(5)
-            self.update_hex_map()
-            if self.ai and not self.game.finished:
-                self.start_ai_turn()
-            elif self.multi is not None:
-                self.start_multi_turn(5)
-        else:
-            pass
-
-    def tl_function(self):
-        if self.in_game and not self.in_progress:
-            self.game.play_turn(6)
-            self.update_hex_map()
-            if self.ai and not self.game.finished:
-                self.start_ai_turn()
-            elif self.multi is not None:
-                self.start_multi_turn(6)
-        else:
-            pass
-
-    def save_game_function(self):
-        if self.multi != None and self.multi.mode == 'Client':
-            print("You can't save game in Client Mode!")
-            pass
-        elif self.in_game and not self.in_progress:
-            data = et.tostring(self.game.game_history)
-            file = open("game_history.xml", "wb")
-            file.write(data)
-            print("Game Saved Successfully")
-        else:
-            pass
-
-    def menu_function(self):
-        if not self.in_progress:
-            if self.multi is not None:
-                self.multi.send_exit()
-            self.in_game = False
-            self.game = None
-            self.close()
-            self.parent.show()
-
-    def create_worker(self, thread_function, signal_function):
-        worker = thread.thread(thread_function)
-        worker.signals.game.connect(signal_function)
-        self.threadpool.start(worker)
-
-    def start_ai_turn(self):
-        self.in_progress = True
-        self.create_worker(self.game.play_turn_ai, self.update_map_thread_finished)
-
-    def start_multi_turn(self, move):
-        self.in_progress = True
-        self.multi.send_move_and_agent(move, self.game.agents[len(self.game.agents) - 1])
-        self.create_worker(self.multi.get_move_and_agent, self.update_map_thread_finished)
-
-    def update_map_thread_finished(self):
-        self.update_hex_map()
-        self.in_progress = False
-
-    def replay(self, game_callback):
+    def replay(self, update_callback, finish_callback):
         tree = et.parse('game_history.xml')
         root = tree.getroot()
         self.player = root.attrib['Nickname']
@@ -230,7 +101,6 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
             self.ai = False
             self.player_2 = 'Player 2'
         self.game = game(root.attrib['AI'], self.multi, self.player)
-        self.in_game = True
         self.in_progress = True
         for elem in root:
             self.game.agents.clear()
@@ -243,10 +113,157 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 new_agent.value = int(subelem.text)
                 self.game.agents.append(new_agent)
             self.game.update_turn()
-            game_callback.emit(self.game)
+            update_callback.emit(self.game)
             time.sleep(1)
+        finish_callback.emit(self.game)
+
+    def play_ai_function(self):
+        self.ai = True
+        self.game = game(1, self.multi, self.player)
+        self.update_hex_map()
+
+    def client_function(self):
+        self.in_progress = True
+        self.game = game(0, self.multi.mode, self.player)
+        self.game.agents.append(self.multi.get_agent())
+        self.game.agents.append(self.multi.get_agent())
+        self.update_hex_map()
+        self.create_worker(self.multi.get_move_and_agent)
+
+    def server_function(self):
+        self.game = game(0, self.multi.mode, self.player)
+        self.multi.send_agent(self.game.agents[0])
+        time.sleep(0.5)
+        self.multi.send_agent(self.game.agents[1])
+        self.update_hex_map()
+
+    def save_game_function(self):
+        if self.multi != None and self.multi.mode == 'Client':
+            print("You can't save game in Client Mode!")
+            pass
+        elif not self.in_progress:
+            data = et.tostring(self.game.game_history)
+            file = open("game_history.xml", "wb")
+            file.write(data)
+            print("Game Saved Successfully")
+        else:
+            pass
+
+    def menu_function(self):
+        if not self.in_progress:
+            if self.multi is not None:
+                self.multi.send_exit()
+            self.game = None
+            self.close()
+            self.parent.show()
+
+    def tr_function(self):
+        self.move = 1
+        self.move_button_clicked()
+
+    def r_function(self):
+        self.move = 2
+        self.move_button_clicked()
+
+    def br_function(self):
+        self.move = 3
+        self.move_button_clicked()
+
+    def bl_function(self):
+        self.move = 4
+        self.move_button_clicked()
+
+    def l_function(self):
+        self.move = 5
+        self.move_button_clicked()
+
+    def tl_function(self):
+        self.move = 6
+        self.move_button_clicked()
+
+    def move_button_clicked(self):
+        if not self.in_progress:
+            self.in_progress = True
+            worker = thread.thread(self.game.play_turn, self.move)
+            worker.signals.update.connect(self.update_hex_map)
+
+            if self.ai and not self.game.finished:
+                worker.signals.finish.connect(self.start_ai_turn)
+            elif self.multi is not None:
+                worker.signals.finish.connect(self.start_multi_turn)
+            else:
+                worker.signals.finish.connect(self.update_map_thread_finished)
+            self.threadpool.start(worker)
+        else:
+            pass
+
+    def start_ai_turn(self):
+        self.update_hex_map()
+        self.create_worker(self.game.play_turn_ai)
+
+    def start_multi_turn(self):
+        self.update_hex_map()
+        self.multi.send_move_and_agent(self.move, self.game.agents[len(self.game.agents) - 1])
+        self.create_worker(self.multi.get_move_and_agent)
+
+    def update_map_thread_finished(self):
+        self.update_hex_map()
         self.in_progress = False
-        game_callback.emit(self.game)
+
+    def create_worker(self, thread_function):
+        worker = thread.thread(thread_function)
+        worker.signals.update.connect(self.update_hex_map)
+        worker.signals.finish.connect(self.update_map_thread_finished)
+        self.threadpool.start(worker)
+
+    def update_hex_map(self):
+        self.set_player_labels()
+        self.clear_map()
+        for elem in self.game.agents:
+            str_val = str(elem.value)
+            if len(str_val) == 1:
+                str_val = "   " + str_val
+            elif len(str_val) == 2:
+                str_val = "  " + str_val
+            elif len(str_val) == 3:
+                str_val = " " + str_val
+            self.hextexts[elem.pos_y][elem.pos_x].setText(str_val)
+            self.set_polygon_brush(elem)
+        self.check_finished()
+
+    def set_player_labels(self):
+        if self.game.curr_turn == 0:
+            self.label_player.setText(self.player)
+            self.label_color.setText('Red')
+        else:
+            self.label_player.setText(self.player_2)
+            self.label_color.setText('Blue')
+
+    def clear_map(self):
+        for lines in self.hexpolygons:
+            for element in lines:
+                element.setBrush(QBrush(Qt.white))
+        for lines in self.hextexts:
+            for element in lines:
+                element.setText("")
+
+    def set_polygon_brush(self, elem):
+        red_brushes = { 2 : QBrush(QColor(255, 223, 212)), 4 : QBrush(QColor(255, 191, 170)),
+                        8 : QBrush(QColor(255, 158, 129)), 16 : QBrush(QColor(255, 123, 90)),
+                        32 : QBrush(QColor(255, 82, 50)), 64 : QBrush(QColor(255, 0, 0)),
+                        128 : QBrush(QColor(209, 21, 7)), 256 : QBrush(QColor(165, 27, 11)),
+                        512 : QBrush(QColor(122, 27, 12)), 1024 : QBrush(QColor(98, 22, 10)),
+                        2048 : QBrush(QColor(82, 23, 11)) }
+        blue_brushes = { 2 : QBrush(QColor(135, 206, 235)), 4 : QBrush(QColor(135, 206, 250)),
+                         8 : QBrush(QColor(0, 191, 255)), 16 : QBrush(QColor(100, 149, 237)),
+                         32 : QBrush(QColor(30, 144, 255)), 64 : QBrush(QColor(65, 105, 225)),
+                         128 : QBrush(QColor(0, 0, 255)), 256 : QBrush(QColor(0, 0, 225)),
+                         512 : QBrush(QColor(0, 0, 195)), 1024 : QBrush(QColor(0, 0, 165)),
+                         2048 : QBrush(QColor(0, 0, 135)) }
+        if elem.player == 0:
+            self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(red_brushes[elem.value])
+        else:
+            self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(blue_brushes[elem.value])
 
     def check_finished(self):
         if self.game.finished:
@@ -313,55 +330,6 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         height = side_len * np.sqrt(3)/2
         self.hexpolygons = self.create_polygons(side_len, height)
         self.hextexts = self.create_text_edits(side_len, height)
-
-    def update_hex_map(self):
-        self.set_player_labels()
-        self.clear_map()
-        for elem in self.game.agents:
-            str_val = str(elem.value)
-            if len(str_val) == 1:
-                str_val = "   " + str_val
-            elif len(str_val) == 2:
-                str_val = "  " + str_val
-            elif len(str_val) == 3:
-                str_val = " " + str_val
-            self.hextexts[elem.pos_y][elem.pos_x].setText(str_val)
-            self.set_polygon_brush(elem)
-        self.check_finished()
-
-    def set_player_labels(self):
-        if self.game.curr_turn % 2 == 0:
-            self.label_player.setText(self.player)
-            self.label_color.setText('Red')
-        else:
-            self.label_player.setText(self.player_2)
-            self.label_color.setText('Blue')
-
-    def clear_map(self):
-        for lines in self.hexpolygons:
-            for element in lines:
-                element.setBrush(QBrush(Qt.white))
-        for lines in self.hextexts:
-            for element in lines:
-                element.setText("")
-
-    def set_polygon_brush(self, elem):
-        red_brushes = { 2 : QBrush(QColor(255, 223, 212)), 4 : QBrush(QColor(255, 191, 170)),
-                        8 : QBrush(QColor(255, 158, 129)), 16 : QBrush(QColor(255, 123, 90)),
-                        32 : QBrush(QColor(255, 82, 50)), 64 : QBrush(QColor(255, 0, 0)),
-                        128 : QBrush(QColor(209, 21, 7)), 256 : QBrush(QColor(165, 27, 11)),
-                        512 : QBrush(QColor(122, 27, 12)), 1024 : QBrush(QColor(98, 22, 10)),
-                        2048 : QBrush(QColor(82, 23, 11)) }
-        blue_brushes = { 2 : QBrush(QColor(135, 206, 235)), 4 : QBrush(QColor(135, 206, 250)),
-                         8 : QBrush(QColor(0, 191, 255)), 16 : QBrush(QColor(100, 149, 237)),
-                         32 : QBrush(QColor(30, 144, 255)), 64 : QBrush(QColor(65, 105, 225)),
-                         128 : QBrush(QColor(0, 0, 255)), 256 : QBrush(QColor(0, 0, 225)),
-                         512 : QBrush(QColor(0, 0, 195)), 1024 : QBrush(QColor(0, 0, 165)),
-                         2048 : QBrush(QColor(0, 0, 135)) }
-        if elem.player == 0:
-            self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(red_brushes[elem.value])
-        else:
-            self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(blue_brushes[elem.value])
 
 
 class scoresWindow(QMainWindow, Ui_ScoresWindow, QWidget):

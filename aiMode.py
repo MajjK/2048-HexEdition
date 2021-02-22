@@ -24,7 +24,7 @@ class aiMode:
         # It generates node if its a player turn, 6 possible moves
         for move in range(1, 7):
             newGame = deepcopy(self.game)
-            newGame.play_turn(move, False)
+            newGame.play_turn(move, create_agent=False)
             node = aiMode(newGame, (self.level + 1) % 4)
             self.children.append(node)
 

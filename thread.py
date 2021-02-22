@@ -4,10 +4,9 @@ import sys
 
 
 class threadSignals(QObject):
-    finished = Signal()
     error = Signal(tuple)
-    result = Signal(object)
-    game = Signal(object)
+    update = Signal(object)
+    finish = Signal(object)
 
 
 class thread(QRunnable):
@@ -16,18 +15,15 @@ class thread(QRunnable):
         self.fn = fn
         self.args = args
         self.kwargs = kwargs
-        self.signals = threadSignals()
-        self.kwargs['game_callback'] = self.signals.game
+        self.signals = threadSignals(None)
+        self.kwargs['update_callback'] = self.signals.update
+        self.kwargs['finish_callback'] = self.signals.finish
 
-    @Slot()
+    @Slot(name="multithreading")
     def run(self):
         try:
             result = self.fn(*self.args, **self.kwargs)
-        except:
-            traceback.print_exc()
+        except traceback as e:
+            e.print_exc()
             exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit((exctype, value, traceback.format_exc()))
-        else:
-            self.signals.result.emit(result)
-        finally:
-            self.signals.finished.emit()
+            self.signals.error.emit((exctype, value, e.format_exc()))

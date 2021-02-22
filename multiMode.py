@@ -17,7 +17,7 @@ class multiMode:
                   str(agent.pos_y) + " " + str(agent.value)
         self.socket.sendall(message.encode())
 
-    def get_move_and_agent(self, game_callback):
+    def get_move_and_agent(self, update_callback, finish_callback):
         data = self.socket.recv(self.BUFFER)
         data = data.decode()
         message = data.split()
@@ -27,14 +27,9 @@ class multiMode:
             self.parent.close()
             self.parent.parent.show()
         else:
-            self.parent.game.play_turn(int(message[0]), create_agent=False)
-            new_agent = agent()
-            new_agent.player = int(message[1])
-            new_agent.pos_x = int(message[2])
-            new_agent.pos_y = int(message[3])
-            new_agent.value = int(message[4])
-            self.parent.game.agents.append(new_agent)
-        game_callback.emit(self.parent.game)
+            self.parent.game.play_turn(move, update_callback, create_agent=False)
+            self.parent.game.agents.append(self.get_agent_from_message(message[1:]))
+        finish_callback.emit(self.parent.game)
 
     def send_agent(self, agent):
         message_agent = str(agent.player) + " " + str(agent.pos_x) + " " + str(agent.pos_y) + " " + str(agent.value)
@@ -44,6 +39,9 @@ class multiMode:
         data = self.socket.recv(self.BUFFER)
         data = data.decode()
         message = data.split()
+        return self.get_agent_from_message(message)
+
+    def get_agent_from_message(self, message):
         new_agent = agent()
         new_agent.player = int(message[0])
         new_agent.pos_x = int(message[1])

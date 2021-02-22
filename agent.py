@@ -8,6 +8,9 @@ class agent:
         self.pos_x = -1
         self.pos_y = -1
 
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
     def create_agent(self, player, map):
         self.player = player
         self.value = 2
@@ -37,107 +40,51 @@ class agent:
         elif direction == 3:
             self.move_br(game.map.map_area, game.agents)
         elif direction == 4:
-            self.move_bl(game.map.map_area, game.agents)
+            self.move_bl(game.agents)
         elif direction == 5:
-            self.move_l(game.map.map_area, game.agents)
+            self.move_l(game.agents)
         elif direction == 6:
-            self.move_tl(game.map.map_area, game.agents)
+            self.move_tl(game.agents)
 
     def move_tr(self, map_area, agents):
-        while True:
-            if 0 < self.pos_y < 5:
-                if self.pos_x < len(map_area[self.pos_y]) - 1:
-                    if not self.look_for_collision(self.pos_y - 1, self.pos_x, agents):
-                        self.pos_y -= 1
-                    else:
-                        break
-                else:
-                    break
-            elif 4 < self.pos_y < 9:
-                if not self.look_for_collision(self.pos_y - 1, self.pos_x + 1, agents):
-                    self.pos_y -= 1
-                    self.pos_x += 1
-                else:
-                    break
-            else:
-                break
+        if 0 < self.pos_y < 5 and self.pos_x < len(map_area[self.pos_y]) - 1 \
+                and not self.look_for_collision(self.pos_y - 1, self.pos_x, agents):
+            self.pos_y -= 1
+        elif 4 < self.pos_y < 9 and not self.look_for_collision(self.pos_y - 1, self.pos_x + 1, agents):
+            self.pos_y -= 1
+            self.pos_x += 1
 
     def move_r(self, map_area, agents):
-        while True:
-            if self.pos_x < len(map_area[self.pos_y]) - 1:
-                if not self.look_for_collision(self.pos_y, self.pos_x + 1, agents):
-                    self.pos_x += 1
-                else:
-                    break
-            else:
-                break
+        if self.pos_x < len(map_area[self.pos_y]) - 1 \
+                and not self.look_for_collision(self.pos_y, self.pos_x + 1, agents):
+            self.pos_x += 1
 
     def move_br(self, map_area, agents):
-        while True:
-            if self.pos_y < 4:
-                if not self.look_for_collision(self.pos_y + 1, self.pos_x + 1, agents):
-                    self.pos_y += 1
-                    self.pos_x += 1
-                else:
-                    break
-            elif self.pos_y < 8:
-                if self.pos_x < len(map_area[self.pos_y]) - 1:
-                    if not self.look_for_collision(self.pos_y + 1, self.pos_x, agents):
-                        self.pos_y += 1
-                    else:
-                        break
-                else:
-                    break
-            else:
-                break
+        if self.pos_y < 4 and not self.look_for_collision(self.pos_y + 1, self.pos_x + 1, agents):
+            self.pos_y += 1
+            self.pos_x += 1
+        elif self.pos_y < 8 and self.pos_x < len(map_area[self.pos_y]) - 1 \
+                and not self.look_for_collision(self.pos_y + 1, self.pos_x, agents):
+            self.pos_y += 1
 
-    def move_bl(self, map_area, agents):
-        while True:
-            if self.pos_y < 4:
-                if not self.look_for_collision(self.pos_y + 1, self.pos_x, agents):
-                    self.pos_y += 1
-                else:
-                    break
-            elif self.pos_y < 8:
-                if self.pos_x > 0:
-                    if not self.look_for_collision(self.pos_y + 1, self.pos_x - 1, agents):
-                        self.pos_y += 1
-                        self.pos_x -= 1
-                    else:
-                        break
-                else:
-                    break
-            else:
-                break
+    def move_bl(self, agents):
+        if self.pos_y < 4 and not self.look_for_collision(self.pos_y + 1, self.pos_x, agents):
+            self.pos_y += 1
+        elif self.pos_y < 8 and self.pos_x > 0 and not self.look_for_collision(self.pos_y + 1, self.pos_x - 1, agents):
+            self.pos_y += 1
+            self.pos_x -= 1
 
-    def move_l(self, map_area, agents):
-        while True:
-            if self.pos_x > 0:
-                if not self.look_for_collision(self.pos_y, self.pos_x - 1, agents):
-                    self.pos_x -= 1
-                else:
-                    break
-            else:
-                break
+    def move_l(self, agents):
+        if self.pos_x > 0 and not self.look_for_collision(self.pos_y, self.pos_x - 1, agents):
+            self.pos_x -= 1
 
-    def move_tl(self, map_area, agents):
-        while True:
-            if 0 < self.pos_y < 5:
-                if self.pos_x > 0:
-                    if not self.look_for_collision(self.pos_y - 1, self.pos_x - 1, agents):
-                        self.pos_y -= 1
-                        self.pos_x -= 1
-                    else:
-                        break
-                else:
-                    break
-            elif 4 < self.pos_y < 9:
-                if not self.look_for_collision(self.pos_y - 1, self.pos_x, agents):
-                    self.pos_y -= 1
-                else:
-                    break
-            else:
-                break
+    def move_tl(self, agents):
+        if 0 < self.pos_y < 5 and self.pos_x > 0 \
+                and not self.look_for_collision(self.pos_y - 1, self.pos_x - 1, agents):
+            self.pos_y -= 1
+            self.pos_x -= 1
+        elif 4 < self.pos_y < 9 and not self.look_for_collision(self.pos_y - 1, self.pos_x, agents):
+            self.pos_y -= 1
 
     def look_for_collision(self, pos_y, pos_x, agents):
         for elem in agents:

@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as et
+from copy import deepcopy
 from aiMode import aiMode
 from agent import agent
 import os.path
@@ -96,28 +97,38 @@ class game:
         elif move == 6:
             self.agents.sort(key=lambda x: x.pos_y)
 
-    def play_turn(self, move, create_agent=True):
+    def play_turn(self, move, update_callback=None, finish_callback=None, create_agent=True):
         self.sort_agents(move)
-        #new_map = None
-        #while self.map != new_map:
-        #    for current_agent in self.agents:
-        #        if current_agent.player == self.curr_turn:
-        #            current_agent.move_agent(self, move)
-        for current_agent in self.agents:
-            if current_agent.player == self.curr_turn:
-                current_agent.move_agent(self, move)
-        for current_agent in self.agents:
-            if current_agent.player == self.curr_turn:
-                current_agent.move_agent(self, move)
+        old_agents = []
+        while old_agents != self.agents:
+            old_agents = deepcopy(self.agents)
+            for current_agent in self.agents:
+                if current_agent.player == self.curr_turn:
+                    current_agent.move_agent(self, move)
+            if update_callback is not None:
+                update_callback.emit(self)
+                time.sleep(0.01)
         self.finished = self.map.update_map(self.agents)
         self.turn += 1
+        self.check_create_agent(create_agent)
+        self.update_turn()
+        if finish_callback is not None:
+            finish_callback.emit(self)
+
+    def check_create_agent(self, create_agent):
         if create_agent and len(self.agents) < 61:
             new_agent = agent()
             new_agent.create_agent(self.turn % 2, self.map.map_area)
             self.agents.append(new_agent)
-        self.update_turn()
 
-    def play_turn_ai(self, game_callback):
+    def update_turn(self):
+        self.finished = self.map.update_map(self.agents)
+        self.curr_turn = self.turn % 2
+        if self.multi != 'Client':
+            self.update_scoreboards(0)
+            self.update_history()
+
+    def play_turn_ai(self, update_callback, finish_callback):
         max_val = -100000
         move_evaluations = []
         best_evaluations = []
@@ -137,12 +148,5 @@ class game:
                 best_evaluations.append(i+1)
         bestMove = random.choice(best_evaluations)
         print('best move: ', bestMove, ' (', max_val, ')')
-        self.play_turn(bestMove)
-        game_callback.emit(self)
-
-    def update_turn(self):
-        self.finished = self.map.update_map(self.agents)
-        self.curr_turn = self.turn % 2
-        if self.multi != 'Client':
-            self.update_scoreboards(0)
-            self.update_history()
+        self.play_turn(bestMove, update_callback)
+        finish_callback.emit(self)
