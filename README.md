@@ -35,4 +35,4 @@ The game offers singleplayer mode(versus AI based on min-max algorithm), hot-sea
 * Saving/Loading game instance to/from .xml file - live replay
 
 ## Setup
-Clone the repo and install all required dependiences (You can do it by pip). Then just start "2048-HexEdition.py" 
+Clone the repo and install all required dependiences. Then just run "modules/main.py" 
