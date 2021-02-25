@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'Hex2048_Multi.ui'
+## Form generated from reading UI file 'Hex2048_Multi.window_ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.15.2
 ##

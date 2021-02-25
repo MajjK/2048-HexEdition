@@ -1,7 +1,7 @@
-from menuWindow import Ui_StartWindow
-from multiWindow import Ui_MultiWindow
-from scoresWindow import Ui_ScoresWindow
-from mainWindow import Ui_MainWindow
+from window_ui.menuWindow import Ui_StartWindow
+from window_ui.multiWindow import Ui_MultiWindow
+from window_ui.scoresWindow import Ui_ScoresWindow
+from window_ui.mainWindow import Ui_MainWindow
 from multiMode import multiMode
 from agent import agent
 from game import game
@@ -17,7 +17,7 @@ import json
 import time
 import sys
 import re
-# pyside2-uic Hex2048.ui > mainWindow.py
+# pyside2-uic Hex2048.window_ui > mainWindow.py
 
 
 class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
@@ -138,7 +138,7 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
         self.update_hex_map()
 
     def save_game_function(self):
-        if self.multi != None and self.multi.mode == 'Client':
+        if self.multi is not None and self.multi.mode == 'Client':
             print("You can't save game in Client Mode!")
             pass
         elif not self.in_progress:
@@ -248,18 +248,18 @@ class mainWindow(QMainWindow, Ui_MainWindow, QWidget):
                 element.setText("")
 
     def set_polygon_brush(self, elem):
-        red_brushes = { 2 : QBrush(QColor(255, 223, 212)), 4 : QBrush(QColor(255, 191, 170)),
-                        8 : QBrush(QColor(255, 158, 129)), 16 : QBrush(QColor(255, 123, 90)),
-                        32 : QBrush(QColor(255, 82, 50)), 64 : QBrush(QColor(255, 0, 0)),
-                        128 : QBrush(QColor(209, 21, 7)), 256 : QBrush(QColor(165, 27, 11)),
-                        512 : QBrush(QColor(122, 27, 12)), 1024 : QBrush(QColor(98, 22, 10)),
-                        2048 : QBrush(QColor(82, 23, 11)) }
-        blue_brushes = { 2 : QBrush(QColor(135, 206, 235)), 4 : QBrush(QColor(135, 206, 250)),
-                         8 : QBrush(QColor(0, 191, 255)), 16 : QBrush(QColor(100, 149, 237)),
-                         32 : QBrush(QColor(30, 144, 255)), 64 : QBrush(QColor(65, 105, 225)),
-                         128 : QBrush(QColor(0, 0, 255)), 256 : QBrush(QColor(0, 0, 225)),
-                         512 : QBrush(QColor(0, 0, 195)), 1024 : QBrush(QColor(0, 0, 165)),
-                         2048 : QBrush(QColor(0, 0, 135)) }
+        red_brushes = {2: QBrush(QColor(255, 223, 212)), 4: QBrush(QColor(255, 191, 170)),
+                       8: QBrush(QColor(255, 158, 129)), 16: QBrush(QColor(255, 123, 90)),
+                       32: QBrush(QColor(255, 82, 50)), 64: QBrush(QColor(255, 0, 0)),
+                       128: QBrush(QColor(209, 21, 7)), 256: QBrush(QColor(165, 27, 11)),
+                       512: QBrush(QColor(122, 27, 12)), 1024: QBrush(QColor(98, 22, 10)),
+                       2048: QBrush(QColor(82, 23, 11))}
+        blue_brushes = {2: QBrush(QColor(135, 206, 235)), 4: QBrush(QColor(135, 206, 250)),
+                        8: QBrush(QColor(0, 191, 255)), 16: QBrush(QColor(100, 149, 237)),
+                        32: QBrush(QColor(30, 144, 255)), 64: QBrush(QColor(65, 105, 225)),
+                        128: QBrush(QColor(0, 0, 255)), 256: QBrush(QColor(0, 0, 225)),
+                        512: QBrush(QColor(0, 0, 195)), 1024: QBrush(QColor(0, 0, 165)),
+                        2048: QBrush(QColor(0, 0, 135))}
         if elem.player == 0:
             self.hexpolygons[elem.pos_y][elem.pos_x].setBrush(red_brushes[elem.value])
         else:

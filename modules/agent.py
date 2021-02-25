@@ -11,7 +11,7 @@ class agent:
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
-    def create_agent(self, player, map):
+    def create_agent(self, player, map_field):
         self.player = player
         self.value = 2
         clear_field = False
@@ -27,7 +27,7 @@ class agent:
                 x = random.randrange(8)
             else:
                 x = random.randrange(9)
-            if map[y][x].value == "":
+            if map_field[y][x].value == "":
                 clear_field = True
                 self.pos_y = y
                 self.pos_x = x
