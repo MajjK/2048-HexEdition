@@ -5,13 +5,13 @@ from agent import agent
 import os.path
 import random
 import time
-import map
+import gameMap
 
 
 class game:
     def __init__(self, ai, multi, player):
         self.agents = []
-        self.map = map.map()
+        self.map = gameMap.map()
         self.finished = False
         self.turn = 0
         self.curr_turn = 0
