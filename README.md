@@ -16,9 +16,9 @@ The game offers singleplayer mode(versus AI based on min-max algorithm), hot-sea
 <p align="center"> 
 <img src="./img/multi_menu.png">
 </p>
-<div align="center"> In-game screenshot: </div>
+<div align="center"> In-game GIF: </div>
 <p align="center"> 
-<img src="./img/in_game_2.png">
+<img src="./img/Hex2048.gif">
 </p>
 
 ## Technologies used
