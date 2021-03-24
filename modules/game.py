@@ -132,7 +132,6 @@ class game:
         max_val = -100000
         move_evaluations = []
         best_evaluations = []
-        time.sleep(1)
         game_node = aiMode(self, 0)
         for i in range(0, self.ai_depth_search):
             game_node.generate_next_level()
