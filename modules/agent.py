@@ -40,11 +40,11 @@ class agent:
         elif direction == 3:
             self.move_br(game.map.map_area, game.agents)
         elif direction == 4:
-            self.move_bl(game.agents)
+            self.move_bl(game.map.map_area, game.agents)
         elif direction == 5:
-            self.move_l(game.agents)
+            self.move_l(game.map.map_area, game.agents)
         elif direction == 6:
-            self.move_tl(game.agents)
+            self.move_tl(game.map.map_area, game.agents)
 
     def move_tr(self, map_area, agents):
         if 0 < self.pos_y < 5 and self.pos_x < len(map_area[self.pos_y]) - 1 \
@@ -67,18 +67,18 @@ class agent:
                 and not self.look_for_collision(self.pos_y + 1, self.pos_x, agents):
             self.pos_y += 1
 
-    def move_bl(self, agents):
+    def move_bl(self, map_area, agents):
         if self.pos_y < 4 and not self.look_for_collision(self.pos_y + 1, self.pos_x, agents):
             self.pos_y += 1
         elif self.pos_y < 8 and self.pos_x > 0 and not self.look_for_collision(self.pos_y + 1, self.pos_x - 1, agents):
             self.pos_y += 1
             self.pos_x -= 1
 
-    def move_l(self, agents):
+    def move_l(self, map_area, agents):
         if self.pos_x > 0 and not self.look_for_collision(self.pos_y, self.pos_x - 1, agents):
             self.pos_x -= 1
 
-    def move_tl(self, agents):
+    def move_tl(self, map_area, agents):
         if 0 < self.pos_y < 5 and self.pos_x > 0 \
                 and not self.look_for_collision(self.pos_y - 1, self.pos_x - 1, agents):
             self.pos_y -= 1
@@ -91,6 +91,7 @@ class agent:
             if elem.pos_y == pos_y and elem.pos_x == pos_x:
                 if elem.player == self.player and elem.value == self.value:
                     elem.value += self.value
-                    agents.pop(agents.index(self))
+                    if self in agents:
+                        agents.pop(agents.index(self))
                 return True
         return False

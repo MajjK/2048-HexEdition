@@ -2,9 +2,9 @@ from agent import agent
 
 
 class multiMode:
-    def __init__(self, multi, parent):
+    def __init__(self, mode, parent):
         self.BUFFER = 100
-        self.mode = multi
+        self.mode = mode
         self.parent = parent
         self.socket = self.parent.socket
 
